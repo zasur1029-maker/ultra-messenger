@@ -48,6 +48,7 @@ const APP = {
   },
 
   async init() {
+    try { const { Sync } = await import('./data/Sync.js'); Sync.connect(); } catch(e) {}
     // Удаляем старые базы
     try { await DB.dropLegacy(); } catch {}
     // Миграция старых сообщений

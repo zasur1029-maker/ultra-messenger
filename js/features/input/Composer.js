@@ -112,6 +112,15 @@ export class Composer {
       createdAt: Date.now()
     };
 
+    // СРАЗУ отправляем на сервер
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg)
+    }).catch((err) => console.warn('[Composer] Ошибка отправки:', err));
+
+    console.log('[Composer] Сообщение отправлено на сервер:', msg.id);
+
     console.log('[Composer] Отправляю:', msg);
 
     // Добавляем в state
