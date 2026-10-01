@@ -9,3 +9,4 @@ Offline-first PWA мессенджер уровня единорога — бе�
 ./start.sh
 # или
 python3 -m http.server 8080
+
