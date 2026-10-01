@@ -133,6 +133,15 @@ async function makeChat(otherUser) {
     };
     console.log('[Search] Создан:', chat);
     await DB.put('chats', chat);
+    // Отправляем на сервер
+    try {
+      await fetch('/api/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chat)
+      });
+      console.log('[UserSearch] Чат отправлен на сервер:', chatId);
+    } catch (e) { console.warn(e); }
   }
 
   // Добавляем в state

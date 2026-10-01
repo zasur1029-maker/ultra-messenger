@@ -60,6 +60,16 @@ export const ChatService = {
 
     console.log('[ChatService] Создан чат:', chatId);
     await DB.put('chats', newChat);
+
+    // Отправляем на сервер
+    try {
+      await fetch('/api/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newChat)
+      });
+      console.log('[ChatService] Чат отправлен на сервер:', chatId);
+    } catch (e) { console.warn('[ChatService]', e); }
     store.state.chats.push(newChat);
     store.state.messages[chatId] = store.state.messages[chatId] || [];
     bus.emit('chats:update');

@@ -408,6 +408,56 @@ const APP = {
       if (this.settings.settings.theme === 'auto') this.settings._applyAll();
     });
 
+    // Периодическая синхронизация с сервером (каждые 5 секунд)
+    setInterval(async () => {
+      try {
+        const res = await fetch('/api/data');
+        const data = await res.json();
+        
+        let changed = false;
+        
+        // Пользователи
+        if (data.users) {
+          for (const u of data.users) {
+            await DB.put('users', u);
+          }
+        }
+        
+        // Чаты
+        if (data.chats && data.chats.length !== store.state.chats.length) {
+          store.state.chats = data.chats;
+          changed = true;
+        }
+        
+        // Сообщения
+        if (data.messages) {
+          const byChat = {};
+          data.messages.forEach((m) => {
+            if (!byChat[m.chatId]) byChat[m.chatId] = [];
+            byChat[m.chatId].push(m);
+          });
+          
+          // Проверяем изменения
+          for (const chatId in byChat) {
+            const oldCount = (store.state.messages[chatId] || []).length;
+            const newCount = byChat[chatId].length;
+            if (newCount !== oldCount) {
+              store.state.messages[chatId] = byChat[chatId];
+              changed = true;
+            }
+          }
+        }
+        
+        if (changed) {
+          bus.emit('chats:update');
+          bus.emit('messages:render');
+          console.log('[App] Синхронизировано с сервером');
+        }
+      } catch (e) {
+        // сервер недоступен — нормально
+      }
+    }, 5000);
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
