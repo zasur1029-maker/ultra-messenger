@@ -95,6 +95,22 @@ const APP = {
   },
 
   async _loadData() {
+    // Загружаем пользователей с сервера
+    try {
+      const res = await fetch('/api/data');
+      const data = await res.json();
+      console.log('[App] Данные с сервера:', data.users?.length, 'юзеров,', data.chats?.length, 'чатов,', data.messages?.length, 'сообщений');
+
+      // Сохраняем юзеров локально
+      if (data.users) {
+        for (const u of data.users) {
+          await DB.put('users', u);
+        }
+      }
+    } catch (e) {
+      console.warn('[App] Сервер недоступен:', e);
+    }
+
     // Загружаем ВСЕ чаты из базы
     const allChats = await DB.getAll('chats');
     console.log('[App] Всего чатов в базе:', allChats.length);
