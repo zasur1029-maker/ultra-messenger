@@ -2,23 +2,66 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
-const fs = require('fs');
-const os = require('os');
+const { Pool } = require('pg');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'db.json');
 
-let DB = { users: [], chats: [], messages: [] };
-if (fs.existsSync(DB_FILE)) {
-  try { DB = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch {}
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com')
+    ? { rejectUnauthorized: false }
+    : false
+});
 
-function saveDB() {
-  try { fs.writeFileSync(DB_FILE, JSON.stringify(DB, null, 2)); } catch {}
+async function initDB() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        name TEXT,
+        avatar TEXT,
+        gradient TEXT,
+        bio TEXT,
+        created_at BIGINT
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chats (
+        id TEXT PRIMARY KEY,
+        type TEXT,
+        title TEXT,
+        gradient TEXT,
+        avatar TEXT,
+        participants JSONB,
+        data JSONB,
+        created_at BIGINT,
+        updated_at BIGINT
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        chat_id TEXT,
+        author_id TEXT,
+        author_name TEXT,
+        text TEXT,
+        type TEXT,
+        attachments JSONB,
+        reactions JSONB,
+        data JSONB,
+        status TEXT,
+        created_at BIGINT
+      );
+    `);
+    console.log('✅ PostgreSQL схема готова');
+  } catch (e) {
+    console.error('❌ Ошибка initDB:', e.message);
+  }
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -30,96 +73,169 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/api/data', (req, res) => res.json(DB));
+app.get('/api/data', async (req, res) => {
+  try {
+    const users = (await pool.query('SELECT * FROM users')).rows;
+    const chats = (await pool.query('SELECT * FROM chats')).rows;
+    const messages = (await pool.query('SELECT * FROM messages ORDER BY created_at ASC')).rows;
 
-app.post('/api/users', (req, res) => {
-  const user = req.body;
-  const existing = DB.users.find((u) => u.username === user.username);
-  if (existing) Object.assign(existing, user);
-  else DB.users.push(user);
-  saveDB();
-  broadcast({ type: 'users:update', users: DB.users });
-  res.json({ ok: true });
+    res.json({
+      users: users.map((r) => ({
+        id: r.id, username: r.username, name: r.name,
+        avatar: r.avatar, gradient: r.gradient, bio: r.bio,
+        createdAt: Number(r.created_at)
+      })),
+      chats: chats.map((r) => ({
+        ...(r.data || {}), id: r.id, type: r.type, title: r.title,
+        gradient: r.gradient, avatar: r.avatar,
+        participants: r.participants,
+        createdAt: Number(r.created_at), updatedAt: Number(r.updated_at)
+      })),
+      messages: messages.map((r) => ({
+        ...(r.data || {}), id: r.id, chatId: r.chat_id,
+        authorId: r.author_id, authorName: r.author_name,
+        text: r.text, type: r.type,
+        attachments: r.attachments, reactions: r.reactions,
+        status: r.status, createdAt: Number(r.created_at)
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/data:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.post('/api/chats', (req, res) => {
-  const chat = req.body;
-  const existing = DB.chats.find((c) => c.id === chat.id);
-  if (existing) Object.assign(existing, chat);
-  else DB.chats.push(chat);
-  saveDB();
-  broadcast({ type: 'chats:update', chats: DB.chats });
-  res.json({ ok: true });
+app.post('/api/users', async (req, res) => {
+  try {
+    const u = req.body;
+    await pool.query(
+      `INSERT INTO users (id, username, name, avatar, gradient, bio, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (username) DO UPDATE SET
+         name = EXCLUDED.name,
+         avatar = EXCLUDED.avatar,
+         gradient = EXCLUDED.gradient`,
+      [u.id || u.username, u.username, u.name, u.avatar || null,
+       u.gradient || null, u.bio || '', u.createdAt || Date.now()]
+    );
+    broadcast({ type: 'users:refresh' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('POST /api/users:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.post('/api/messages', (req, res) => {
-  const msg = req.body;
-  const existing = DB.messages.find((m) => m.id === msg.id);
-  if (existing) Object.assign(existing, msg);
-  else DB.messages.push(msg);
-  saveDB();
-  broadcast({ type: 'messages:update', message: msg });
-  res.json({ ok: true });
+app.post('/api/chats', async (req, res) => {
+  try {
+    const c = req.body;
+    await pool.query(
+      `INSERT INTO chats (id, type, title, gradient, avatar, participants, data, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         participants = EXCLUDED.participants,
+         data = EXCLUDED.data,
+         updated_at = EXCLUDED.updated_at`,
+      [c.id, c.type || 'personal', c.title, c.gradient || null, c.avatar || null,
+       JSON.stringify(c.participants || []), JSON.stringify(c),
+       c.createdAt || Date.now(), c.updatedAt || Date.now()]
+    );
+    broadcast({ type: 'chats:refresh' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('POST /api/chats:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/messages', async (req, res) => {
+  try {
+    const m = req.body;
+    await pool.query(
+      `INSERT INTO messages (id, chat_id, author_id, author_name, text, type, attachments, reactions, data, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ON CONFLICT (id) DO UPDATE SET
+         text = EXCLUDED.text,
+         reactions = EXCLUDED.reactions,
+         status = EXCLUDED.status`,
+      [m.id, m.chatId, m.authorId, m.authorName || null, m.text || '',
+       m.type || 'text', JSON.stringify(m.attachments || []),
+       JSON.stringify(m.reactions || {}), JSON.stringify(m),
+       m.status || 'sent', m.createdAt || Date.now()]
+    );
+    broadcast({ type: 'messages:refresh' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('POST /api/messages:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 const clients = new Set();
-wss.on('connection', (ws) => {
-  console.log('Client connected. Total:', clients.size + 1);
+wss.on('connection', async (ws) => {
   clients.add(ws);
-  ws.send(JSON.stringify({ type: 'init', data: DB }));
+  console.log('Клиент подключён. Всего:', clients.size);
+
+  try {
+    const users = (await pool.query('SELECT * FROM users')).rows;
+    const chats = (await pool.query('SELECT * FROM chats')).rows;
+    const messages = (await pool.query('SELECT * FROM messages ORDER BY created_at ASC')).rows;
+    ws.send(JSON.stringify({
+      type: 'init',
+      data: {
+        users: users.map((r) => ({ ...r, createdAt: Number(r.created_at) })),
+        chats: chats.map((r) => ({ ...(r.data || {}), id: r.id, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) })),
+        messages: messages.map((r) => ({ ...(r.data || {}), id: r.id, chatId: r.chat_id, createdAt: Number(r.created_at) }))
+      }
+    }));
+  } catch (e) { console.error(e.message); }
 
   ws.on('close', () => clients.delete(ws));
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === 'message') {
-        if (!DB.messages.find((m) => m.id === msg.message.id)) {
-          DB.messages.push(msg.message);
-          saveDB();
-          broadcast({ type: 'messages:update', message: msg.message }, ws);
-        }
+        const m = msg.message;
+        await pool.query(
+          `INSERT INTO messages (id, chat_id, author_id, author_name, text, type, attachments, reactions, data, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (id) DO NOTHING`,
+          [m.id, m.chatId, m.authorId, m.authorName, m.text,
+           m.type || 'text', JSON.stringify(m.attachments || []),
+           JSON.stringify(m.reactions || {}), JSON.stringify(m),
+           m.status || 'sent', m.createdAt || Date.now()]
+        );
+        broadcast({ type: 'messages:update', message: m }, ws);
       }
       if (msg.type === 'chat') {
-        if (!DB.chats.find((c) => c.id === msg.chat.id)) {
-          DB.chats.push(msg.chat);
-          saveDB();
-          broadcast({ type: 'chats:update', chats: DB.chats }, ws);
-        }
+        const c = msg.chat;
+        await pool.query(
+          `INSERT INTO chats (id, type, title, gradient, avatar, participants, data, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (id) DO NOTHING`,
+          [c.id, c.type || 'personal', c.title, c.gradient, c.avatar,
+           JSON.stringify(c.participants || []), JSON.stringify(c),
+           c.createdAt || Date.now(), c.updatedAt || Date.now()]
+        );
+        broadcast({ type: 'chats:refresh' }, ws);
       }
-      if (msg.type === 'user') {
-        if (!DB.users.find((u) => u.username === msg.user.username)) {
-          DB.users.push(msg.user);
-          saveDB();
-          broadcast({ type: 'users:update', users: DB.users }, ws);
-        }
-      }
-    } catch (e) {}
+    } catch (e) { console.error(e.message); }
   });
 });
 
 function broadcast(data, except = null) {
   const str = JSON.stringify(data);
-  clients.forEach((client) => {
-    if (client !== except && client.readyState === WebSocket.OPEN) {
-      client.send(str);
-    }
+  clients.forEach((c) => {
+    if (c !== except && c.readyState === WebSocket.OPEN) c.send(str);
   });
 }
 
 app.use(express.static(__dirname));
 
-server.listen(PORT, '0.0.0.0', () => {
-  const os = require('os');
-  const nets = os.networkInterfaces();
-  let ip = 'localhost';
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) ip = net.address;
-    }
-  }
-  console.log('');
-  console.log('🚀 Ultra Messenger Server');
-  console.log('Local:   http://localhost:' + PORT);
-  console.log('Network: http://' + ip + ':' + PORT);
-  console.log('');
+initDB().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Server running on port', PORT);
+    console.log('DATABASE_URL установлен:', !!process.env.DATABASE_URL);
+  });
 });
