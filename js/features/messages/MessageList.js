@@ -1,0 +1,596 @@
+/**
+ * Список сообщений с виртуальным скроллом (упрощённый, но эффективный).
+ * Стратегия: рендерим все сообщения, но контент скрываем через content-visibility.
+ * Для 10000+ — можно расширить до полной виртуализации.
+ */
+import { el, formatTime, formatDate, groupBy, debounce } from '../../core/Utils.js';
+import { icon, iconHTML } from '../../core/Icon.js';
+import { renderMarkdown, stripMarkdown } from './MarkdownLite.js';
+import { store } from '../../core/Store.js';
+import { bus } from '../../core/EventBus.js';
+import { avatar } from '../../ui/Avatar.js';
+import { showContextMenu } from '../../ui/ContextMenu.js';
+import { toast } from '../../ui/Toast.js';
+
+export class MessageList {
+  constructor(container) {
+    this.container = container;
+    this.scrollDownBtn = document.getElementById('scrollDown');
+    this.scrollDownBadge = document.getElementById('scrollDownBadge');
+    this.autoScroll = true;
+    this.unreadBelow = 0;
+    this._bindScroll();
+    bus.on('messages:render', () => this.render());
+    bus.on('messages:append', ({ chatId, message }) => this.append(chatId, message));
+    bus.on('messages:update', ({ chatId, message }) => this.update(chatId, message));
+  }
+
+  _bindScroll() {
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = this.container;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 60;
+      this.autoScroll = atBottom;
+      this.scrollDownBtn.hidden = atBottom || this.container.children.length === 0;
+      if (atBottom) { this.unreadBelow = 0; this.scrollDownBadge.textContent = ''; }
+    };
+    this.container.addEventListener('scroll', onScroll, { passive: true });
+    this.scrollDownBtn.addEventListener('click', () => this.scrollToBottom(true));
+  }
+
+  render() {
+    const chatId = store.state.activeChatId;
+    if (!chatId) { this.container.replaceChildren(); return; }
+    const messages = store.state.messages[chatId] || [];
+    const chat = store.state.chats.find((c) => c.id === chatId);
+    if (!chat) return;
+
+    const frag = document.createDocumentFragment();
+
+    // Группировка по дням
+    const byDay = new Map();
+    for (const m of messages) {
+      const d = new Date(m.createdAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(m);
+    }
+
+    let prevAuthor = null;
+    let prevTime = 0;
+
+    for (const [key, dayMessages] of byDay) {
+      const dayDivider = el('div', { class: 'day-divider' },
+        el('span', { text: formatDate(dayMessages[0].createdAt) })
+      );
+      frag.append(dayDivider);
+
+      for (const msg of dayMessages) {
+        const grouped = prevAuthor === msg.authorId && (msg.createdAt - prevTime) < 3 * 60_000;
+        frag.append(this._renderMessage(msg, chat, grouped));
+        prevAuthor = msg.authorId;
+        prevTime = msg.createdAt;
+      }
+    }
+
+    this.container.replaceChildren(frag);
+    if (this.autoScroll) this.scrollToBottom(false);
+  }
+
+  _renderMessage(msg, chat, grouped) {
+    const me = store.state.user;
+    const isOut = msg.authorId === me.id || msg.authorId === me.username;
+    const participants = chat.participants || [];
+    let author;
+    if (isOut) {
+      author = store.state.user;
+    } else {
+      // Ищем по id или username
+      author = participants.find((p) => p.id === msg.authorId) ||
+               participants.find((p) => p.id === String(msg.authorId).toLowerCase()) ||
+               { name: msg.authorName || 'Пользователь', gradient: null };
+    }
+
+    const msgNode = el('div', {
+      class: `msg ${isOut ? 'msg--out' : 'msg--in'} ${grouped ? 'msg--grouped' : ''}`,
+      dataset: { id: msg.id, chatId: chat.id },
+      role: 'article'
+    });
+
+    if (!isOut && chat.type !== 'personal' && chat.type !== 'bot' && chat.type !== 'saved') {
+      const av = avatar({ name: author.name, gradient: author.gradient, size: 'sm' });
+      const wrap = el('div', { class: 'msg__avatar' }, av);
+      msgNode.append(wrap);
+    } else if (!isOut && !grouped) {
+      msgNode.append(el('div', { class: 'msg__avatar', style: { width: '32px' } }));
+    }
+
+    const body = el('div', { class: 'msg__body' });
+    const bubble = el('div', { class: `bubble ${isOut ? 'bubble--out' : 'bubble--in'} ${!grouped ? (isOut ? 'bubble--tail-out' : 'bubble--tail-in') : ''}`.trim() });
+
+    // Reply quote
+    if (msg.replyTo) {
+      const original = (store.state.messages[chat.id] || []).find((m) => m.id === msg.replyTo);
+      if (original) {
+        const origAuthor = original.authorId === store.state.user.id
+          ? store.state.user
+          : participants.find((p) => p.id === original.authorId) || { name: 'Кто-то' };
+        const quote = el('div', {
+          class: 'bubble__quote',
+          onClick: () => this._scrollToMessage(original.id)
+        },
+          el('span', { class: 'bubble__quote-author', text: origAuthor.name }),
+          el('span', { class: 'bubble__quote-text', text: stripMarkdown(original.text).slice(0, 120) })
+        );
+        bubble.append(quote);
+      }
+    }
+
+    // Forward
+    if (msg.forwardedFrom) {
+      const fwd = el('div', {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: 'var(--color-accent)',
+          fontSize: '13px',
+          fontStyle: 'italic',
+          marginBottom: '6px',
+          paddingBottom: '4px',
+          borderBottom: '1px solid var(--color-divider)',
+          width: '100%'
+        }
+      });
+      const arrow = icon('forward', 14, 2.2);
+      arrow.style.opacity = '0.9';
+      fwd.append(arrow);
+      const authorName = msg.forwardedFrom.authorName || 'неизвестно';
+      fwd.append(el('span', { text: 'Переслано от ' + authorName }));
+      bubble.append(fwd);
+    }
+
+    // Автор для групп
+    if (!isOut && !grouped && (chat.type === 'group' || chat.type === 'channel')) {
+      bubble.append(el('div', { class: 'bubble__author', text: author.name }));
+    }
+
+    // Вложения
+    if (msg.type === 'image' && msg.attachments[0]) {
+      const att = msg.attachments[0];
+
+      if (!att.url || att.broken) {
+        // Заглушка для битых картинок
+        const placeholder = el('div', {
+          class: 'bubble__image-broken',
+          style: {
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', padding: '20px 16px',
+            background: 'rgba(0,0,0,0.06)', borderRadius: '12px',
+            color: 'var(--color-text-tertiary)', fontSize: '13px',
+            marginBottom: '4px', minWidth: '180px'
+          }
+        });
+        placeholder.textContent = '🖼 Изображение недоступно';
+        bubble.append(placeholder);
+      } else {
+        const img = el('img', {
+          class: 'bubble__image',
+          src: att.url,
+          alt: 'Изображение',
+          loading: 'lazy',
+          style: { maxWidth: '100%', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer' }
+        });
+        img.addEventListener('error', () => {
+          // Если не загрузилось — заменяем на заглушку
+          img.replaceWith(el('div', {
+            style: {
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px 16px', background: 'rgba(0,0,0,0.06)',
+              borderRadius: '12px', color: 'var(--color-text-tertiary)',
+              fontSize: '13px', minWidth: '180px'
+            },
+            text: '🖼 Изображение недоступно'
+          }));
+        });
+        img.addEventListener('click', () => window.open(att.url, '_blank'));
+        bubble.append(img);
+      }
+    }
+
+    if (msg.type === 'file' && msg.attachments[0]) {
+      const f = msg.attachments[0];
+      bubble.append(el('a', { class: 'bubble__file', href: f.url, download: f.name },
+        el('div', { class: 'bubble__file-icon' }, icon('file', 20)),
+        el('div', { class: 'bubble__file-info' },
+          el('div', { class: 'bubble__file-name', text: f.name }),
+          el('div', { class: 'bubble__file-size', text: f.sizeFormatted || '' })
+        )
+      ));
+    }
+
+    if (msg.type === 'voice' && msg.attachments[0]) {
+      const v = msg.attachments[0];
+      const voiceEl = el('div', { class: 'bubble__voice' });
+      const playBtn = el('button', { class: 'voice-play', 'aria-label': 'Играть' }, icon('play', 18));
+      const wave = el('div', { class: 'voice-wave' });
+      const bars = v.waveform || Array.from({ length: 32 }, () => Math.random());
+      bars.forEach((h) => {
+        const bar = el('i');
+        bar.style.height = `${Math.max(4, h * 24)}px`;
+        wave.append(bar);
+      });
+      const time = el('span', { class: 'voice-time', text: v.durationFormatted || '0:00' });
+      voiceEl.append(playBtn, wave, time);
+      bubble.append(voiceEl);
+
+      let audio = null;
+      let audioBroken = false;
+
+      playBtn.addEventListener('click', async () => {
+        if (audioBroken) {
+          toast.error('Голосовое недоступно после перезагрузки');
+          return;
+        }
+        try {
+          if (!audio) {
+            audio = new Audio();
+            audio.addEventListener('ended', () => playBtn.replaceChildren(icon('play', 18)));
+            audio.addEventListener('error', () => {
+              audioBroken = true;
+              playBtn.style.opacity = '0.5';
+              playBtn.title = 'Недоступно';
+            });
+            audio.src = v.url;
+          }
+          if (audio.paused) {
+            await audio.play();
+            playBtn.replaceChildren(icon('pause', 18));
+          } else {
+            audio.pause();
+            playBtn.replaceChildren(icon('play', 18));
+          }
+        } catch (err) {
+          audioBroken = true;
+          playBtn.style.opacity = '0.5';
+          console.warn('[Voice] Не удалось воспроизвести:', err.message);
+        }
+      });
+    }
+
+    // Текст
+    if (msg.text) {
+      // Проверяем: только ли эмодзи в тексте
+      const emojiOnly = isEmojiOnly(msg.text);
+
+      const textNode = el('div', {
+        class: 'bubble__text' + (emojiOnly ? ' bubble__text--emoji' : '')
+      });
+
+      if (emojiOnly) {
+        // Большие эмодзи без markdown
+        const trimmed = msg.text.trim();
+        const emojiCount = Array.from(trimmed).length;
+        // Для 1-3 эмодзи — большие, для 4-6 — средние
+        let size = '52px';
+        if (emojiCount >= 4) size = '36px';
+        if (emojiCount >= 7) size = '26px';
+        textNode.style.fontSize = size;
+        textNode.style.lineHeight = '1.1';
+        textNode.style.textAlign = 'center';
+        textNode.style.letterSpacing = '2px';
+        textNode.textContent = trimmed;
+      } else {
+        textNode.append(renderMarkdown(msg.text));
+      }
+
+      bubble.append(textNode);
+    }
+
+    // Мета
+    const meta = el('span', { class: 'bubble__meta' });
+    if (msg.edited) meta.append(el('span', { class: 'msg--edited', text: 'ред. ' }));
+    meta.append(el('span', { text: formatTime(msg.createdAt) }));
+    if (isOut) {
+      const checkIcon = msg.status === 'read' ? 'doubleCheck' : msg.status === 'delivered' ? 'doubleCheck' : msg.status === 'sending' ? 'clock' : 'check';
+      const check = icon(checkIcon, 14, 2);
+      if (msg.status === 'read') check.classList.add('check--read');
+      meta.append(check);
+    }
+    bubble.append(meta);
+
+    // Реакции
+    const reactions = msg.reactions || {};
+    const keys = Object.keys(reactions).filter((k) => reactions[k]?.length);
+    if (keys.length) {
+      const reactionsNode = el('div', { class: 'bubble__reactions' });
+      for (const emoji of keys) {
+        const users = reactions[emoji];
+        const isMine = users.includes(store.state.user.id);
+        reactionsNode.append(el('button', {
+          class: `reaction ${isMine ? 'is-mine' : ''}`,
+          onClick: (e) => { e.stopPropagation(); this._toggleReaction(chat.id, msg.id, emoji); }
+        },
+          el('span', { text: emoji }),
+          el('span', { class: 'reaction__count', text: String(users.length) })
+        ));
+      }
+      bubble.append(reactionsNode);
+    }
+
+    body.append(bubble);
+
+    // Двойной клик — быстрая реакция
+    bubble.addEventListener('dblclick', (e) => {
+      if (e.target.closest('a, button')) return;
+      this._toggleReaction(chat.id, msg.id, '❤️');
+    });
+
+    // Контекстное меню
+    bubble.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this._showMsgContextMenu(e.clientX, e.clientY, chat, msg, isOut);
+    });
+
+    msgNode.append(body);
+    return msgNode;
+  }
+
+  _showMsgContextMenu(x, y, chat, msg, isOut) {
+    const items = [
+      { icon: 'reply', label: 'Ответить', onClick: () => { store.state.ui.replyTo = msg; bus.emit('ui:replyChanged', msg); } },
+      { icon: 'smile', label: 'Реакция', onClick: () => bus.emit('ui:reactionPicker', { chatId: chat.id, messageId: msg.id, x, y }) },
+      { icon: 'copy', label: 'Копировать текст', onClick: () => navigator.clipboard.writeText(msg.text || '').then(() => toast.success('Скопировано')) },
+      { icon: 'forward', label: 'Переслать', onClick: () => toast.info('Выберите чат для пересылки') },
+      { divider: true },
+      ...(isOut ? [
+        { icon: 'edit', label: 'Редактировать', onClick: () => { store.state.ui.editingId = msg.id; bus.emit('ui:editChanged', msg); } },
+        { icon: 'trash', label: 'Удалить', danger: true, onClick: () => this._deleteMessage(chat.id, msg.id) }
+      ] : []),
+      ...(!isOut ? [{ icon: 'trash', label: 'Удалить у себя', danger: true, onClick: () => this._deleteMessage(chat.id, msg.id) }] : [])
+    ];
+    showContextMenu(items, { x, y });
+  }
+
+  _toggleReaction(chatId, messageId, emoji) {
+    const list = store.state.messages[chatId];
+    const msg = list.find((m) => m.id === messageId);
+    if (!msg) return;
+    msg.reactions = msg.reactions || {};
+    const users = msg.reactions[emoji] || [];
+    const idx = users.indexOf(store.state.user.id);
+    if (idx >= 0) users.splice(idx, 1);
+    else users.push(store.state.user.id);
+    if (users.length === 0) delete msg.reactions[emoji];
+    else msg.reactions[emoji] = users;
+    msg._updated = true;
+    this.update(chatId, msg);
+  }
+
+  _deleteMessage(chatId, messageId) {
+    const list = store.state.messages[chatId];
+    const idx = list.findIndex((m) => m.id === messageId);
+    if (idx < 0) return;
+    const removed = list.splice(idx, 1)[0];
+    this.render();
+    toast.info('Сообщение удалено', {
+      action: {
+        label: 'Отменить',
+        onClick: () => {
+          list.splice(idx, 0, removed);
+          this.render();
+          bus.emit('messages:persist', { chatId });
+        }
+      },
+      duration: 5000
+    });
+    bus.emit('messages:persist', { chatId });
+  }
+
+  _scrollToMessage(id) {
+    const node = this.container.querySelector(`[data-id="${id}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node.animate([{ background: 'var(--color-accent-subtle)' }, { background: 'transparent' }], { duration: 1200 });
+  }
+
+  append(chatId, message) {
+    if (chatId !== store.state.activeChatId) return;
+    const list = store.state.messages[chatId] || [];
+    const prev = list[list.length - 2];
+    const grouped = prev && prev.authorId === message.authorId && (message.createdAt - prev.createdAt) < 3 * 60_000;
+    const node = this._renderMessage(message, store.state.chats.find((c) => c.id === chatId), grouped);
+    this.container.append(node);
+    if (this.autoScroll) this.scrollToBottom(true);
+    else {
+      this.unreadBelow++;
+      this.scrollDownBadge.textContent = String(this.unreadBelow);
+      this.scrollDownBtn.hidden = false;
+    }
+  }
+
+  update(chatId, message) {
+    if (chatId !== store.state.activeChatId) return;
+    const old = this.container.querySelector(`[data-id="${message.id}"]`);
+    if (!old) return;
+    const chat = store.state.chats.find((c) => c.id === chatId);
+    const newNode = this._renderMessage(message, chat, false);
+    old.replaceWith(newNode);
+  }
+
+  scrollToBottom(smooth = true) {
+    this.autoScroll = true;
+    this.unreadBelow = 0;
+    this.scrollDownBadge.textContent = '';
+    this.scrollDownBtn.hidden = true;
+    this.container.scrollTo({ top: this.container.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  _quickReact(chatId, messageId) {
+    console.log('[React] Открываю пикер для', messageId.slice(0, 12));
+
+    const emojis = ['❤️', '👍', '😂', '🔥', '😮', '😢', '🎉', '👏'];
+
+    // Backdrop — создаём ДО btn
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.35); z-index: 999998;';
+
+    // Пикер
+    const picker = document.createElement('div');
+    picker.style.cssText = 'position: fixed; background: var(--color-bg-elevated, #fff); border-radius: 999px; padding: 6px; box-shadow: 0 20px 40px -8px rgba(0,0,0,0.5); display: flex; gap: 2px; z-index: 999999; left: 50%; top: 50%; transform: translate(-50%, -50%);';
+
+    // Функция закрытия
+    const close = () => {
+      picker.remove();
+      backdrop.remove();
+      document.removeEventListener('keydown', onEsc);
+    };
+    const onEsc = (e) => { if (e.key === 'Escape') close(); };
+
+    // Обработчики
+    backdrop.addEventListener('click', close);
+
+    emojis.forEach((emoji) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = emoji;
+      btn.style.cssText = 'width: 44px; height: 44px; border: none; background: transparent; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; transition: transform 0.12s, background 0.12s;';
+      btn.addEventListener('mouseenter', () => {
+        btn.style.transform = 'scale(1.25)';
+        btn.style.background = 'var(--color-bg-hover, #f4f4f5)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'scale(1)';
+        btn.style.background = 'transparent';
+      });
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[React] Выбрано:', emoji);
+        this._toggleReaction(chatId, messageId, emoji);
+        close();
+      });
+      picker.appendChild(btn);
+    });
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(picker);
+    document.addEventListener('keydown', onEsc);
+  }
+
+  _forwardMessage(chatId, msg) {
+    console.log('[Forward] Открываю выбор чата');
+
+    const chats = store.state.chats.filter((c) => c.id !== chatId);
+    if (!chats.length) {
+      toast.info('Нет других чатов');
+      return;
+    }
+
+    import('../../ui/Modal.js').then(({ modal }) => {
+      const body = document.createElement('div');
+      body.style.cssText = 'display: flex; flex-direction: column; gap: 4px; max-height: 400px; overflow-y: auto;';
+
+      chats.forEach((c) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: none; background: transparent; border-radius: 10px; cursor: pointer; text-align: left; width: 100%; font-family: inherit; font-size: 14px; color: inherit; transition: background 0.12s;';
+        btn.addEventListener('mouseenter', () => btn.style.background = 'var(--color-bg-hover)');
+        btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
+
+        const av = document.createElement('div');
+        av.textContent = (c.title || '?')[0].toUpperCase();
+        av.style.cssText = 'width: 40px; height: 40px; border-radius: 50%; background: ' + (c.gradient || 'linear-gradient(135deg, #667eea, #764ba2)') + '; color: #fff; display: grid; place-items: center; font-weight: 600; flex-shrink: 0; font-size: 16px;';
+        btn.appendChild(av);
+
+        const name = document.createElement('span');
+        name.textContent = c.title;
+        name.style.flex = '1';
+        btn.appendChild(name);
+
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[Forward] Выбран:', c.title);
+          this._doForward(msg, c.id, c.title);
+          m.close();
+        });
+
+        body.appendChild(btn);
+      });
+
+      const m = modal({ title: 'Переслать в…', body });
+    }).catch((err) => {
+      console.error('[Forward] Ошибка:', err);
+      toast.error('Не удалось открыть список');
+    });
+  }
+
+  _doForward(msg, targetChatId, targetTitle) {
+    console.log('[Forward] Пересылаю в', targetTitle);
+
+    // Определяем автора оригинала
+    let originalAuthor = 'Кто-то';
+    if (msg.authorId === store.state.user.id) {
+      originalAuthor = store.state.user.name || 'Вы';
+    } else {
+      const originalChat = store.state.chats.find((c) => c.id === msg.chatId);
+      if (originalChat) {
+        if (originalChat.type === 'personal' || originalChat.type === 'bot') {
+          originalAuthor = originalChat.title;
+        } else {
+          const participant = (originalChat.participants || []).find((p) => p.id === msg.authorId);
+          originalAuthor = participant?.name || originalChat.title;
+        }
+      }
+    }
+
+    const newMsg = Object.assign({}, msg, {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      chatId: targetChatId,
+      authorId: store.state.user.id,
+      createdAt: Date.now(),
+      status: 'sent',
+      forwardedFrom: {
+        chatId: msg.chatId,
+        authorName: originalAuthor
+      }
+    });
+
+    const list = store.state.messages[targetChatId] || (store.state.messages[targetChatId] = []);
+    list.push(newMsg);
+
+    bus.emit('messages:append', { chatId: targetChatId, message: newMsg });
+    bus.emit('messages:persist', { chatId: targetChatId });
+
+    const targetChat = store.state.chats.find((c) => c.id === targetChatId);
+    if (targetChat) {
+      targetChat.updatedAt = Date.now();
+      bus.emit('chats:persist', targetChatId);
+    }
+
+    toast.success('Переслано в «' + targetTitle + '»');
+  }
+
+}
+
+
+/**
+ * Проверяет — содержит ли текст ТОЛЬКО эмодзи и пробелы (без букв/цифр).
+ * Использует Unicode Extended_Pictographic.
+ */
+function isEmojiOnly(text) {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return false;
+  if (trimmed.length > 30) return false; // слишком длинный — точно не только эмодзи
+
+  // Regex: только эмодзи + variation selectors + ZWJ + пробелы
+  const emojiRegex = /^(?:\p{Extended_Pictographic}|[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{1F1E6}-\u{1F1FF}]|\uFE0F|\u200D|\u{1F3FB}-\u{1F3FF}|\u{2700}-\u{27BF}|\u{2B00}-\u{2BFF}|[\s])+$/u;
+
+  // Проверяем что НЕТ букв и цифр
+  const hasLetters = /[a-zA-Zа-яА-Я0-9]/.test(trimmed);
+  if (hasLetters) return false;
+
+  return emojiRegex.test(trimmed);
+}
+

@@ -1,0 +1,210 @@
+════════════════════════════════════════════════════════════
+  ULTRA MESSENGER — ОТЧЁТ О СОСТОЯНИИ ПРОЕКТА
+  Проект: ultra-messenger
+  Дата:   2026-10-01 11:27:04
+════════════════════════════════════════════════════════════
+
+--- СТАТИСТИКА ---
+Файлов:      65
+Папок:       23
+Заполнено:   36
+Заглушек:    0
+Пустых:      29
+Размер:      206,4 KB
+
+--- ФАЙЛЫ (размер в байтах, отсортированы по пути) ---
+0	./assets/icons/.gitkeep
+0	./assets/sounds/.gitkeep
+0	./assets/wallpapers/.gitkeep
+0	./dev/benchmark.js
+0	./dev/mock.js
+0	./dev/test.js
+0	./.gitignore
+11714	./index.html
+15590	./js/app.js
+1013	./js/core/Component.js
+1431	./js/core/EventBus.js
+0	./js/core/Scheduler.js
+1744	./js/core/Store.js
+5271	./js/core/Utils.js
+1021	./js/data/Cache.js
+4088	./js/data/DB.js
+2073	./js/data/Models.js
+10630	./js/data/Seed.js
+2485	./js/features/auth/Auth.js
+5493	./js/features/auth/AuthUI.js
+3527	./js/features/auth/Onboarding.js
+11711	./js/features/bot/BotSimulator.js
+0	./js/features/bot/Dictionary.js
+0	./js/features/bot/Personalities.js
+8226	./js/features/calls/Call.js
+0	./js/features/calls/CallUI.js
+0	./js/features/chats/ChatContextMenu.js
+0	./js/features/chats/ChatFolders.js
+9101	./js/features/chats/ChatList.js
+0	./js/features/chats/ChatSearch.js
+10471	./js/features/input/Composer.js
+8747	./js/features/input/EmojiPicker.js
+0	./js/features/input/FileUpload.js
+0	./js/features/input/StickerPicker.js
+0	./js/features/input/VoiceRecorder.js
+4640	./js/features/messages/MarkdownLite.js
+0	./js/features/messages/MessageActions.js
+0	./js/features/messages/MessageBubble.js
+13297	./js/features/messages/MessageList.js
+0	./js/features/messages/Reactions.js
+2041	./js/features/notifications/Notifier.js
+837	./js/features/pwa/PWA.js
+9142	./js/features/settings/Settings.js
+0	./js/features/settings/ThemeManager.js
+0	./js/i18n/en.js
+0	./js/i18n/ru.js
+0	./js/i18n/uz.js
+911	./js/ui/Avatar.js
+1760	./js/ui/ContextMenu.js
+1502	./js/ui/Dropdown.js
+9668	./js/ui/Icon.js
+4641	./js/ui/Modal.js
+0	./js/ui/Skeleton.js
+1358	./js/ui/Toast.js
+0	./js/ui/Tooltip.js
+0	./js/workers/image.worker.js
+0	./js/workers/search.worker.js
+992	./manifest.webmanifest
+0	./README.md
+2021	./styles/animations.css
+2334	./styles/base.css
+23814	./styles/components.css
+9039	./styles/layout.css
+6581	./styles/tokens.css
+2411	./sw.js
+
+--- ПУСТЫЕ ФАЙЛЫ (0 байт) ---
+./assets/icons/.gitkeep
+./assets/sounds/.gitkeep
+./assets/wallpapers/.gitkeep
+./dev/benchmark.js
+./dev/mock.js
+./dev/test.js
+./.gitignore
+./js/core/Scheduler.js
+./js/features/bot/Dictionary.js
+./js/features/bot/Personalities.js
+./js/features/calls/CallUI.js
+./js/features/chats/ChatContextMenu.js
+./js/features/chats/ChatFolders.js
+./js/features/chats/ChatSearch.js
+./js/features/input/FileUpload.js
+./js/features/input/StickerPicker.js
+./js/features/input/VoiceRecorder.js
+./js/features/messages/MessageActions.js
+./js/features/messages/MessageBubble.js
+./js/features/messages/Reactions.js
+./js/features/settings/ThemeManager.js
+./js/i18n/en.js
+./js/i18n/ru.js
+./js/i18n/uz.js
+./js/ui/Skeleton.js
+./js/ui/Tooltip.js
+./js/workers/image.worker.js
+./js/workers/search.worker.js
+./README.md
+
+--- ЗАГЛУШКИ (< 100 байт) ---
+(нет)
+
+--- ДЕРЕВО ---
+.
+./assets
+./assets/icons
+./assets/icons/.gitkeep
+./assets/sounds
+./assets/sounds/.gitkeep
+./assets/wallpapers
+./assets/wallpapers/.gitkeep
+./check.sh
+./dev
+./dev/benchmark.js
+./dev/mock.js
+./dev/test.js
+./.gitignore
+./index.html
+./js
+./js/app.js
+./js/core
+./js/core/Component.js
+./js/core/EventBus.js
+./js/core/Scheduler.js
+./js/core/Store.js
+./js/core/Utils.js
+./js/data
+./js/data/Cache.js
+./js/data/DB.js
+./js/data/Models.js
+./js/data/Seed.js
+./js/features
+./js/features/auth
+./js/features/auth/Auth.js
+./js/features/auth/AuthUI.js
+./js/features/auth/Onboarding.js
+./js/features/bot
+./js/features/bot/BotSimulator.js
+./js/features/bot/Dictionary.js
+./js/features/bot/Personalities.js
+./js/features/calls
+./js/features/calls/Call.js
+./js/features/calls/CallUI.js
+./js/features/chats
+./js/features/chats/ChatContextMenu.js
+./js/features/chats/ChatFolders.js
+./js/features/chats/ChatList.js
+./js/features/chats/ChatSearch.js
+./js/features/input
+./js/features/input/Composer.js
+./js/features/input/EmojiPicker.js
+./js/features/input/FileUpload.js
+./js/features/input/StickerPicker.js
+./js/features/input/VoiceRecorder.js
+./js/features/messages
+./js/features/messages/MarkdownLite.js
+./js/features/messages/MessageActions.js
+./js/features/messages/MessageBubble.js
+./js/features/messages/MessageList.js
+./js/features/messages/Reactions.js
+./js/features/notifications
+./js/features/notifications/Notifier.js
+./js/features/pwa
+./js/features/pwa/PWA.js
+./js/features/settings
+./js/features/settings/Settings.js
+./js/features/settings/ThemeManager.js
+./js/i18n
+./js/i18n/en.js
+./js/i18n/ru.js
+./js/i18n/uz.js
+./js/ui
+./js/ui/Avatar.js
+./js/ui/ContextMenu.js
+./js/ui/Dropdown.js
+./js/ui/Icon.js
+./js/ui/Modal.js
+./js/ui/Skeleton.js
+./js/ui/Toast.js
+./js/ui/Tooltip.js
+./js/workers
+./js/workers/image.worker.js
+./js/workers/search.worker.js
+./manifest.webmanifest
+./README.md
+./report.txt
+./styles
+./styles/animations.css
+./styles/base.css
+./styles/components.css
+./styles/layout.css
+./styles/tokens.css
+./sw.js
+
+════════════════════════════════════════════════════════════
+  КОНЕЦ ОТЧЁТА
+════════════════════════════════════════════════════════════

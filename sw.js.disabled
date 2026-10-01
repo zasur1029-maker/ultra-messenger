@@ -1,0 +1,80 @@
+/**
+ * Ultra Messenger Service Worker
+ * Стратегии: shell = cache-first, assets = stale-while-revalidate,
+ * data = network-first с fallback на IndexedDB (managed app-кодом).
+ */
+const VERSION = 'ultra-msg-v1.0.0';
+const SHELL_CACHE = `${VERSION}-shell`;
+const ASSET_CACHE = `${VERSION}-assets`;
+
+const SHELL_URLS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './styles/tokens.css',
+  './styles/base.css',
+  './styles/layout.css',
+  './styles/components.css',
+  './styles/animations.css',
+  './js/app.js'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS).catch(() => {}))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  // App shell: cache-first
+  if (SHELL_URLS.some((p) => url.pathname.endsWith(p.replace('./', ''))) || req.mode === 'navigate') {
+    event.respondWith(cacheFirst(req, SHELL_CACHE));
+    return;
+  }
+
+  // Assets: stale-while-revalidate
+  event.respondWith(staleWhileRevalidate(req, ASSET_CACHE));
+});
+
+async function cacheFirst(req, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(req);
+  if (cached) return cached;
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch {
+    const fallback = await cache.match('./index.html');
+    return fallback || new Response('Offline', { status: 503 });
+  }
+}
+
+async function staleWhileRevalidate(req, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(req);
+  const fetchPromise = fetch(req).then((res) => {
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  }).catch(() => cached);
+  return cached || fetchPromise;
+}
+
+// Push (эмуляция — приложение само вызывает через postMessage)
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
