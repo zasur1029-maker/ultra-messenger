@@ -79,6 +79,19 @@ export const Auth = {
     store.state.user = user;
     console.log('[Auth] ✅ Создан новый:', user);
     bus.emit('auth:loggedIn', user);
+
+    // ОТПРАВЛЯЕМ НА СЕРВЕР
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      });
+      console.log('[Auth] ✅ Пользователь на сервере:', await res.json());
+    } catch (e) {
+      console.warn('[Auth] Сервер недоступен:', e);
+    }
+
     return user;
   },
 
@@ -90,6 +103,17 @@ export const Auth = {
     store.state.user = user;
     console.log('[Auth] ✅ Логин:', user);
     bus.emit('auth:loggedIn', user);
+
+    // ОТПРАВЛЯЕМ НА СЕРВЕР (если не было)
+    try {
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      });
+      console.log('[Auth] ✅ Логин отправлен на сервер');
+    } catch (e) {}
+
     return user;
   },
 
