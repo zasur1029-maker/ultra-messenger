@@ -581,16 +581,33 @@ const APP = {
   },
 
   _showDrawingToolbar() {
-    console.log('[Drawing Toolbar] Открываю');
+    console.log('[Drawing Toolbar] Открываю панель');
     document.querySelector('.drawing-toolbar')?.remove();
     document.querySelector('.drawing-counter')?.remove();
 
     const conv = document.querySelector('.conversation');
     if (!conv) { console.warn('[Drawing Toolbar] .conversation не найден'); return; }
 
+    // Панель инструментов
     const toolbar = document.createElement('div');
     toolbar.className = 'drawing-toolbar';
-    toolbar.style.cssText = 'position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--color-bg-elevated); border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; max-width: calc(100vw - 32px); overflow-x: auto;';
+    toolbar.style.cssText = `
+      position: absolute;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--color-bg-elevated);
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 100;
+      max-width: calc(100% - 40px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    `;
 
     // Цвета
     const colors = ['#2aabee', '#e53935', '#4caf50', '#ff9800', '#8b5cf6', '#000000', '#ffffff'];
@@ -598,7 +615,7 @@ const APP = {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'drawing-toolbar__color' + (i === 0 ? ' is-active' : '');
-      btn.style.cssText = 'width: 28px; height: 28px; border-radius: 50%; border: 2px solid ' + (i === 0 ? 'var(--color-text-primary)' : 'transparent') + '; background: ' + color + '; cursor: pointer; padding: 0; flex-shrink: 0;' + (color === '#ffffff' ? ' box-shadow: inset 0 0 0 1px #ccc;' : '');
+      btn.style.cssText = 'width: 28px; height: 28px; border-radius: 50%; border: 2px solid ' + (i === 0 ? 'var(--color-text-primary)' : 'transparent') + '; background: ' + color + '; cursor: pointer; padding: 0; flex-shrink: 0;';
       btn.addEventListener('click', () => {
         toolbar.querySelectorAll('.drawing-toolbar__color').forEach((b) => { b.style.borderColor = 'transparent'; });
         btn.style.borderColor = 'var(--color-text-primary)';
@@ -621,6 +638,7 @@ const APP = {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.title = t.label;
+      btn.dataset.tool = t.tool;
       btn.style.cssText = 'width: 32px; height: 32px; border: none; border-radius: 50%; background: ' + (t.tool === 'pen' ? 'var(--color-accent)' : 'transparent') + '; color: ' + (t.tool === 'pen' ? '#fff' : 'var(--color-text-primary)') + '; cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
       btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + t.svg + '</svg>';
       btn.addEventListener('click', () => {
@@ -629,7 +647,6 @@ const APP = {
         btn.style.color = '#fff';
         if (this.drawing) this.drawing.setTool(t.tool);
       });
-      btn.dataset.tool = t.tool;
       toolbar.appendChild(btn);
     });
 
@@ -642,7 +659,7 @@ const APP = {
     [2, 4, 8, 16].forEach((s, i) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.title = 'Размер ' + s;
+      btn.dataset.size = s;
       btn.style.cssText = 'width: 28px; height: 28px; border: 2px solid ' + (i === 1 ? 'var(--color-accent)' : 'transparent') + '; border-radius: 50%; background: var(--color-bg-hover); cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
       btn.innerHTML = '<span style="width: ' + (s + 2) + 'px; height: ' + (s + 2) + 'px; background: var(--color-text-primary); border-radius: 50%;"></span>';
       btn.addEventListener('click', () => {
@@ -650,7 +667,6 @@ const APP = {
         btn.style.borderColor = 'var(--color-accent)';
         if (this.drawing) this.drawing.setSize(s);
       });
-      btn.dataset.size = s;
       toolbar.appendChild(btn);
     });
 
@@ -710,10 +726,11 @@ const APP = {
     // Счётчик
     const counter = document.createElement('div');
     counter.className = 'drawing-counter';
-    counter.style.cssText = 'position: absolute; top: 70px; left: 16px; padding: 6px 12px; background: var(--color-bg-elevated); color: var(--color-text-secondary); border-radius: 999px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100;';
+    counter.style.cssText = 'position: absolute; top: 70px; left: 16px; padding: 6px 12px; background: var(--color-bg-elevated); color: var(--color-text-secondary); border-radius: 999px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 60;';
     counter.textContent = '🎨 ' + (this.drawing?.strokes?.length || 0) + ' шт.';
     conv.appendChild(counter);
   },
+
 
   _updateDrawingCounter() {
     const counter = document.querySelector('.drawing-counter');

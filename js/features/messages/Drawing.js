@@ -26,16 +26,8 @@ export class Drawing {
 
   /** Инициализация */
   init(container) {
-    // Проверка что контейнер есть
-    if (!container) {
-      console.warn('[Drawing] Контейнер не передан');
-      return;
-    }
-
-    // Уже создан — не дублируем
     if (this.canvas && this.canvas.isConnected) return;
 
-    // Ищем .messages
     const messagesEl = container.querySelector?.('.messages') || container;
     if (!messagesEl) {
       console.warn('[Drawing] .messages не найден');
@@ -44,57 +36,47 @@ export class Drawing {
 
     this.container = messagesEl;
 
-    // Создаём canvas
+    // Делаем .messages относительно-позиционированным
+    const cs = window.getComputedStyle(messagesEl);
+    if (cs.position === 'static') {
+      messagesEl.style.position = 'relative';
+    }
+
     const canvas = document.createElement('canvas');
     canvas.className = 'drawing-canvas';
-    canvas.style.cssText = `
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%;
-      pointer-events: none;
-      z-index: 0;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    `;
-
+    canvas.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 0;';
     messagesEl.insertBefore(canvas, messagesEl.firstChild);
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
 
-    // Первичный ресайз
-    this._resize();
+    // Первый ресайз
+    setTimeout(() => this._resize(), 100);
 
-    // ResizeObserver — наблюдаем за .messages
     try {
       this.resizeObserver = new ResizeObserver(() => this._resize());
       this.resizeObserver.observe(messagesEl);
-    } catch (e) {
-      console.warn('[Drawing] ResizeObserver не поддерживается', e);
-    }
+    } catch (e) {}
 
-    // Скролл — canvas растёт вместе с контентом
-    messagesEl.addEventListener('scroll', () => this._onScroll(), { passive: true });
+    messagesEl.addEventListener('scroll', () => this._resize(), { passive: true });
 
-    // События мыши
+    // Обработчики мыши
     canvas.addEventListener('mousedown', (e) => this._onPointerDown(e));
     canvas.addEventListener('mousemove', (e) => this._onPointerMove(e));
     canvas.addEventListener('mouseup', () => this._onPointerUp());
     canvas.addEventListener('mouseleave', () => this._onPointerUp());
 
-    // События touch
     canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         e.preventDefault();
         this._onPointerDown(e.touches[0]);
       }
     }, { passive: false });
-
     canvas.addEventListener('touchmove', (e) => {
       if (e.touches.length === 1 && this.drawing) {
         e.preventDefault();
         this._onPointerMove(e.touches[0]);
       }
     }, { passive: false });
-
     canvas.addEventListener('touchend', () => this._onPointerUp());
 
     console.log('[Drawing] Инициализирован');
