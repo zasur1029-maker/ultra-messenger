@@ -104,6 +104,16 @@ export const Sync = {
         } catch (e) {}
         break;
 
+      case 'drawings:clear-all': {
+        if (window.__DRAWING__) {
+          window.__DRAWING__.strokes = [];
+          window.__DRAWING__._redrawAll();
+        }
+        localStorage.removeItem('um_drawings');
+        console.log('[Sync] 🗑 Все рисунки очищены');
+        break;
+      }
+
       case 'drawings:update': {
         const { chatId, strokes } = msg;
         const drawing = window.__DRAWING__;
