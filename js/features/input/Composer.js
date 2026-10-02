@@ -101,20 +101,12 @@ export class Composer {
   send() {
     const text = this.input.value.trim();
     const chatId = store.state.activeChatId;
-    if (!chatId) {
-      toast.error('Не выбран чат');
-      return;
-    }
+    if (!chatId) { toast.error('Не выбран чат'); return; }
 
     const editingId = store.state.ui.editingId;
-    if (editingId) {
-      this._applyEdit(chatId, editingId, text);
-      return;
-    }
-
+    if (editingId) { this._applyEdit(chatId, editingId, text); return; }
     if (!text) return;
 
-    // ПРОСТО: создаём сообщение и сохраняем через ChatService
     const me = store.state.user;
     const msg = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -130,59 +122,48 @@ export class Composer {
       createdAt: Date.now()
     };
 
-    // СРАЗУ отправляем на сервер
-    fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msg)
-    }).catch((err) => console.warn('[Composer] Ошибка отправки:', err));
-
-    console.log('[Composer] Сообщение отправлено:', msg.id);
-    import('../../data/Sync.js').then(({ Sync }) => {
-      Sync.sendMessage(msg);
-      const chat = store.state.chats.find((x) => x.id === chatId);
-      if (chat) Sync.sendChat(chat);
-    }).catch(() => {});
-
     console.log('[Composer] Отправляю:', msg);
 
-    // Добавляем в state
     if (!store.state.messages[chatId]) store.state.messages[chatId] = [];
     store.state.messages[chatId].push(msg);
 
-    // Обновляем чат
     const chat = store.state.chats.find((c) => c.id === chatId);
     if (chat) chat.updatedAt = Date.now();
 
-    // Эмитим события — app.js их обработает и сохранит в БД
     bus.emit('messages:append', { chatId, message: msg });
     bus.emit('message:sent', { chatId, message: msg });
 
-    // Очищаем input
     this.input.value = '';
     this.input.style.height = 'auto';
     this._clearReply();
     this.focus();
 
-    // СТАТУСЫ
-    // Статус: sending → sent (когда сервер принял)
+    // === СТАТУСЫ ===
+    // sending → sent (0.5 сек)
     setTimeout(() => {
       if (msg.status === 'sending') {
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
-        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage({...msg}));
+        console.log('[Composer] → sent');
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
       }
     }, 500);
 
-    // delivered — когда сервер подтвердил
+    // sent → delivered (1.5 сек)
     setTimeout(() => {
       if (msg.status === 'sent') {
         msg.status = 'delivered';
         bus.emit('messages:update', { chatId, message: msg });
-        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage({...msg}));
+        console.log('[Composer] → delivered');
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
       }
     }, 1500);
-    setTimeout(() => { msg.status = 'delivered'; bus.emit('messages:update', { chatId, message: msg }); }, 700);
+
+    // Отправка через WebSocket сразу
+    import('../../data/Sync.js').then(({ Sync }) => {
+      Sync.sendMessage(msg);
+      if (chat) Sync.sendChat(chat);
+    }).catch(() => {});
   }
 
   _applyEdit(chatId, messageId, newText) {

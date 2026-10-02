@@ -103,13 +103,12 @@ export class Drawing {
   /** Ресайз с защитой от null */
   _resize() {
     if (!this.canvas || !this.container) {
-      console.warn('[Drawing._resize] Canvas или container null');
+      return;  // тихо игнорируем
       return;
     }
 
     if (!this.canvas.isConnected) {
-      console.warn('[Drawing._resize] Canvas не в DOM');
-      return;
+      return;  // тихо игнорируем
     }
 
     const dpr = window.devicePixelRatio || 1;
