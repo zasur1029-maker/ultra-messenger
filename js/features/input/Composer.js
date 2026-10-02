@@ -187,26 +187,30 @@ export class Composer {
 
     for (const file of Array.from(files).slice(0, 10)) {
       const isImage = file.type.startsWith('image/');
-          let url;
-    if (isImage) {
-      // Для изображений — конвертируем в dataURL (навсегда сохранится)
-      url = await fileToDataUrl(file);
-    } else {
-      // Для остальных файлов — blob (временно)
-      url = URL.createObjectURL(file);
-    }
-      let width = null, height = null;
+      const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/');
+      let url, width = null, height = null;
 
       if (isImage) {
+        // Картинка → сжимаем в dataURL (сохранится навсегда)
         try {
+          url = await compressImage(file, 1200);
           const dims = await getImageDimensions(url);
-          width = dims.w; height = dims.h;
-        } catch {}
+          width = dims.w;
+          height = dims.h;
+        } catch (err) {
+          console.warn('[Composer] Сжатие упало, использую оригинал:', err);
+          url = await fileToDataUrl(file);
+        }
+      } else {
+        // Файлы/видео — тоже в dataURL, чтобы сохранились
+        url = await fileToDataUrl(file);
       }
 
       const msg = createMessage({
         chatId,
-        authorId: store.state.user.id,
+        authorId: store.state.user.username || store.state.user.id,
+        authorName: store.state.user.name,
         type: isImage ? 'image' : 'file',
         text: '',
         attachments: [{

@@ -459,8 +459,8 @@ const APP = {
         
         if (changed) {
           bus.emit('chats:update');
-          bus.emit('messages:render');
-          console.log('[App] Синхронизировано с сервером');
+          // Не дёргаем render — это вызывает лаги
+          // bus.emit('messages:render');
         }
       } catch (e) {
         // сервер недоступен — нормально

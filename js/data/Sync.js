@@ -100,7 +100,7 @@ export const Sync = {
             store.state.messages = byChat;
           }
           bus.emit('chats:update');
-          bus.emit('messages:render');
+          // не рендерим весь список при refresh
         } catch (e) {}
         break;
 
@@ -110,10 +110,11 @@ export const Sync = {
         const existing = store.state.messages[m.chatId].find((x) => x.id === m.id);
         if (existing) {
           Object.assign(existing, m);
+          // Обновляем только ДОМ-элемент, без render
           bus.emit('messages:update', { chatId: m.chatId, message: existing });
         } else {
+          // Новое сообщение — append, не render
           store.state.messages[m.chatId].push(m);
-          console.log('[Sync] 📩 Новое:', m.text);
           bus.emit('messages:append', { chatId: m.chatId, message: m });
           bus.emit('chats:update');
           this._sound();

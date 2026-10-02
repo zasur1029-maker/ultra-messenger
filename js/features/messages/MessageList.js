@@ -394,11 +394,47 @@ export class MessageList {
 
   update(chatId, message) {
     if (chatId !== store.state.activeChatId) return;
-    const old = this.container.querySelector(`[data-id="${message.id}"]`);
-    if (!old) return;
-    const chat = store.state.chats.find((c) => c.id === chatId);
-    const newNode = this._renderMessage(message, chat, false);
-    old.replaceWith(newNode);
+
+    // Находим сообщение в DOM
+    const oldNode = this.container.querySelector('[data-id="' + message.id + '"]');
+    if (!oldNode) return;
+
+    // Находим meta (время + галочки)
+    const meta = oldNode.querySelector('.bubble__meta');
+    if (!meta) return;
+
+    // Обновляем только галочку (без полной перерисовки!)
+    const me = store.state.user;
+    const isOut = message.authorId === me.id || message.authorId === me.username;
+    if (!isOut) return;
+
+    // Убираем старую галочку
+    const oldCheck = meta.querySelector('svg');
+    if (oldCheck) oldCheck.remove();
+
+    // Добавляем новую
+    let checkIcon = 'check';
+    let checkClass = '';
+    if (message.status === 'read') {
+      checkIcon = 'doubleCheck';
+      checkClass = 'check--read';
+    } else if (message.status === 'delivered') {
+      checkIcon = 'doubleCheck';
+      checkClass = 'check--delivered';
+    } else if (message.status === 'sent') {
+      checkIcon = 'check';
+    } else {
+      checkIcon = 'clock';
+    }
+    const check = icon(checkIcon, 14, 2);
+    if (checkClass) check.classList.add(checkClass);
+    meta.append(check);
+
+    // Также обновляем реакции если есть
+    const oldReactions = oldNode.querySelector('.bubble__reactions');
+    if (oldReactions && message.reactions) {
+      // (не перерисовываем — только если были изменения)
+    }
   }
 
   scrollToBottom(smooth = true) {
