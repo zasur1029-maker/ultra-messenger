@@ -86,21 +86,194 @@ export class MessageList {
     const me = store.state.user;
     const isOut = msg.authorId === me.id || msg.authorId === me.username;
     const participants = chat.participants || [];
+
     let author;
+    if (isOut) {
+      author = me;
+    } else {
+      author = participants.find((p) => p.id === msg.authorId) ||
+               participants.find((p) => p.id === String(msg.authorId).toLowerCase()) ||
+               { name: msg.authorName || 'Пользователь', gradient: null };
+    }
+
+    const msgNode = el('div', {
+      class: 'msg ' + (isOut ? 'msg--out' : 'msg--in') + (grouped ? ' msg--grouped' : ''),
+      dataset: { id: msg.id, chatId: chat.id },
+      role: 'article'
+    });
+
+    // Аватар собеседника
+    if (!isOut && chat.type !== 'personal' && chat.type !== 'bot' && chat.type !== 'saved') {
+      const av = avatar({ name: author.name, gradient: author.gradient, size: 'sm' });
+      msgNode.append(el('div', { class: 'msg__avatar' }, av));
+    } else if (!isOut && !grouped) {
+      msgNode.append(el('div', { class: 'msg__avatar', style: { width: '32px' } }));
+    }
+
+    // Body
+    const body = el('div', { class: 'msg__body' });
+    const bubble = el('div', { class: 'bubble ' + (isOut ? 'bubble--out' : 'bubble--in') + (!grouped ? (isOut ? ' bubble--tail-out' : ' bubble--tail-in') : '') });
+
+    // Reply quote
+    if (msg.replyTo) {
+      const original = (store.state.messages[chat.id] || []).find((m) => m.id === msg.replyTo);
+      if (original) {
+        const origAuthor = original.authorId === me.id || original.authorId === me.username
+          ? me
+          : participants.find((p) => p.id === original.authorId) || { name: 'Кто-то' };
+        const quote = el('div', {
+          class: 'bubble__quote',
+          onClick: () => this._scrollToMessage(original.id)
+        },
+          el('span', { class: 'bubble__quote-author', text: origAuthor.name }),
+          el('span', { class: 'bubble__quote-text', text: stripMarkdown(original.text || '').slice(0, 120) })
+        );
+        bubble.append(quote);
+      }
+    }
+
+    // Forward
+    if (msg.forwardedFrom) {
+      const fwd = el('div', {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: 'var(--color-accent)',
+          fontSize: '13px',
+          fontStyle: 'italic',
+          marginBottom: '6px',
+          paddingBottom: '4px',
+          borderBottom: '1px solid var(--color-divider)',
+          width: '100%'
+        }
+      });
+      const arrow = icon('forward', 14, 2.2);
+      arrow.style.opacity = '0.9';
+      fwd.append(arrow);
+      fwd.append(el('span', { text: 'Переслано от ' + (msg.forwardedFrom.authorName || 'неизвестно') }));
+      bubble.append(fwd);
+    }
+
+    // Автор в группах
+    if (!isOut && !grouped && (chat.type === 'group' || chat.type === 'channel')) {
+      bubble.append(el('div', { class: 'bubble__author', text: author.name }));
+    }
+
+    // Картинки
+    if (msg.type === 'image' && msg.attachments && msg.attachments[0]) {
+      const att = msg.attachments[0];
+      if (!att.url || att.broken) {
+        bubble.append(el('div', {
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 16px', background: 'rgba(0,0,0,0.06)', borderRadius: '12px', color: 'var(--color-text-tertiary)', fontSize: '13px', marginBottom: '4px', minWidth: '180px' },
+          text: '🖼 Изображение недоступно'
+        }));
+      } else {
+        const img = el('img', {
+          class: 'bubble__image',
+          src: att.url,
+          alt: 'Изображение',
+          loading: 'lazy',
+          style: { maxWidth: '100%', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer' }
+        });
+        img.addEventListener('click', () => window.open(att.url, '_blank'));
+        bubble.append(img);
+      }
+    }
+
+    // Файлы
+    if (msg.type === 'file' && msg.attachments && msg.attachments[0]) {
+      const f = msg.attachments[0];
+      bubble.append(el('a', { class: 'bubble__file', href: f.url, download: f.name },
+        el('div', { class: 'bubble__file-icon' }, icon('file', 20)),
+        el('div', { class: 'bubble__file-info' },
+          el('div', { class: 'bubble__file-name', text: f.name }),
+          el('div', { class: 'bubble__file-size', text: f.sizeFormatted || '' })
+        )
+      ));
+    }
+
+    // Голосовые
+    if (msg.type === 'voice' && msg.attachments && msg.attachments[0]) {
+      const v = msg.attachments[0];
+      const voiceEl = el('div', { class: 'bubble__voice' });
+      const playBtn = el('button', { class: 'voice-play', 'aria-label': 'Играть' }, icon('play', 18));
+      const wave = el('div', { class: 'voice-wave' });
+      const bars = v.waveform || Array.from({ length: 32 }, () => Math.random());
+      bars.forEach((h) => {
+        const bar = el('i');
+        bar.style.height = Math.max(4, h * 24) + 'px';
+        wave.append(bar);
+      });
+      const time = el('span', { class: 'voice-time', text: v.durationFormatted || '0:00' });
+      voiceEl.append(playBtn, wave, time);
+      bubble.append(voiceEl);
+
+      let audio = null;
+      let audioBroken = false;
+      playBtn.addEventListener('click', async () => {
+        if (audioBroken) { toast.error('Голосовое недоступно'); return; }
+        try {
+          if (!audio) {
+            audio = new Audio();
+            audio.addEventListener('ended', () => playBtn.replaceChildren(icon('play', 18)));
+            audio.addEventListener('error', () => { audioBroken = true; playBtn.style.opacity = '0.5'; });
+            audio.src = v.url;
+          }
+          if (audio.paused) {
+            await audio.play();
+            playBtn.replaceChildren(icon('pause', 18));
+          } else {
+            audio.pause();
+            playBtn.replaceChildren(icon('play', 18));
+          }
+        } catch (err) {
+          audioBroken = true;
+          playBtn.style.opacity = '0.5';
+        }
+      });
+    }
+
+    // Текст
+    if (msg.text) {
+      const emojiOnly = isEmojiOnly(msg.text);
+      const textNode = el('div', { class: 'bubble__text' + (emojiOnly ? ' bubble__text--emoji' : '') });
+      if (emojiOnly) {
+        const trimmed = msg.text.trim();
+        const emojiCount = Array.from(trimmed).length;
+        let size = '52px';
+        if (emojiCount >= 4) size = '36px';
+        if (emojiCount >= 7) size = '26px';
+        textNode.style.fontSize = size;
+        textNode.style.lineHeight = '1.1';
+        textNode.style.textAlign = 'center';
+        textNode.style.letterSpacing = '2px';
+        textNode.textContent = trimmed;
+      } else {
+        textNode.append(renderMarkdown(msg.text));
+      }
+      bubble.append(textNode);
+    }
+
+    // Мета: время + галочки
+    const meta = el('span', { class: 'bubble__meta' });
+    if (msg.edited) meta.append(el('span', { class: 'msg--edited', text: 'ред. ' }));
+    meta.append(el('span', { text: formatTime(msg.createdAt) }));
+
     if (isOut) {
       let checkIcon = 'check';
       let checkClass = '';
 
       if (msg.status === 'read') {
         checkIcon = 'doubleCheck';
-        checkClass = 'check--read';        // синие
+        checkClass = 'check--read';
       } else if (msg.status === 'delivered') {
         checkIcon = 'doubleCheck';
-        checkClass = 'check--delivered';   // серые
+        checkClass = 'check--delivered';
       } else if (msg.status === 'sent') {
-        checkIcon = 'check';                // одна галочка
+        checkIcon = 'check';
       } else {
-        checkIcon = 'clock';                // часики
+        checkIcon = 'clock';
       }
 
       const check = icon(checkIcon, 14, 2);
@@ -116,9 +289,9 @@ export class MessageList {
       const reactionsNode = el('div', { class: 'bubble__reactions' });
       for (const emoji of keys) {
         const users = reactions[emoji];
-        const isMine = users.includes(store.state.user.id);
+        const isMine = users.includes(me.id) || users.includes(me.username);
         reactionsNode.append(el('button', {
-          class: `reaction ${isMine ? 'is-mine' : ''}`,
+          class: 'reaction' + (isMine ? ' is-mine' : ''),
           onClick: (e) => { e.stopPropagation(); this._toggleReaction(chat.id, msg.id, emoji); }
         },
           el('span', { text: emoji }),
@@ -132,7 +305,7 @@ export class MessageList {
 
     // Двойной клик — быстрая реакция
     bubble.addEventListener('dblclick', (e) => {
-      if (e.target.closest('a, button')) return;
+      if (e.target.closest('a, button, img')) return;
       this._toggleReaction(chat.id, msg.id, '❤️');
     });
 
@@ -405,4 +578,3 @@ function isEmojiOnly(text) {
 
   return emojiRegex.test(trimmed);
 }
-
