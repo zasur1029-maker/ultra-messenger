@@ -507,7 +507,7 @@ const APP = {
     });
   },
 
-  _openChat(chatId) {
+  async _openChat(chatId) {
     if (!chatId) return;
     const chat = store.state.chats.find((c) => c.id === chatId);
     if (!chat) return;
