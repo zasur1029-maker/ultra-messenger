@@ -327,6 +327,7 @@ export class Drawing {
   /** Обновить счётчик */
   _updateCounter() {
     return; // отключено
+    return; // отключено
     const counter = document.querySelector('.drawing-counter');
     if (counter) counter.textContent = '🎨 ' + this.strokes.length + ' шт.';
   }
