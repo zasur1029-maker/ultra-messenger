@@ -552,6 +552,16 @@ const APP = {
       pinnedBar.hidden = true;
     }
 
+    // СОЗДАЁМ CANVAS если его нет (для этого чата)
+    if (this.drawing) {
+      const messagesEl = document.querySelector('.messages');
+      if (messagesEl && (!this.drawing.canvas || !this.drawing.canvas.isConnected)) {
+        console.log('[App] Создаю canvas для текущего чата');
+        this.drawing.canvas = null;  // сброс
+        this.drawing.init(document.querySelector('.conversation'));
+      }
+    }
+
     // Загрузить рисунки для этого чата
     if (this.drawing) {
       this.drawing.strokes = this.drawing._load(chatId);

@@ -26,40 +26,57 @@ export class Drawing {
 
   /** Инициализация */
   init(container) {
-    if (this.canvas && this.canvas.isConnected) return;
+    // Если canvas уже есть и в DOM — пропускаем
+    if (this.canvas && this.canvas.isConnected) {
+      console.log('[Drawing] Canvas уже есть');
+      return;
+    }
 
-    const messagesEl = container.querySelector?.('.messages') || container;
+    // Ищем .messages
+    let messagesEl = document.querySelector('.messages');
+    if (!messagesEl) {
+      // Fallback — берём container
+      messagesEl = container?.querySelector?.('.messages') || container;
+    }
+
     if (!messagesEl) {
       console.warn('[Drawing] .messages не найден');
       return;
     }
 
+    console.log('[Drawing] init: .messages найден, создаю canvas');
     this.container = messagesEl;
 
-    // Делаем .messages относительно-позиционированным
-    const cs = window.getComputedStyle(messagesEl);
-    if (cs.position === 'static') {
+    // Делаем .messages relative
+    if (window.getComputedStyle(messagesEl).position === 'static') {
       messagesEl.style.position = 'relative';
     }
 
+    // Создаём canvas
     const canvas = document.createElement('canvas');
     canvas.className = 'drawing-canvas';
     canvas.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 0;';
+    
+    // Вставляем как первый ребёнок
     messagesEl.insertBefore(canvas, messagesEl.firstChild);
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
 
-    // Первый ресайз
-    setTimeout(() => this._resize(), 100);
+    console.log('[Drawing] Canvas создан. В DOM:', canvas.isConnected);
 
+    // Первый ресайз
+    setTimeout(() => {
+      this._resize();
+      console.log('[Drawing] Resize выполнен. Размер:', canvas.width, 'x', canvas.height);
+    }, 200);
+
+    // ResizeObserver
     try {
       this.resizeObserver = new ResizeObserver(() => this._resize());
       this.resizeObserver.observe(messagesEl);
     } catch (e) {}
 
-    messagesEl.addEventListener('scroll', () => this._resize(), { passive: true });
-
-    // Обработчики мыши
+    // События мыши
     canvas.addEventListener('mousedown', (e) => this._onPointerDown(e));
     canvas.addEventListener('mousemove', (e) => this._onPointerMove(e));
     canvas.addEventListener('mouseup', () => this._onPointerUp());
@@ -71,12 +88,14 @@ export class Drawing {
         this._onPointerDown(e.touches[0]);
       }
     }, { passive: false });
+    
     canvas.addEventListener('touchmove', (e) => {
       if (e.touches.length === 1 && this.drawing) {
         e.preventDefault();
         this._onPointerMove(e.touches[0]);
       }
     }, { passive: false });
+    
     canvas.addEventListener('touchend', () => this._onPointerUp());
 
     console.log('[Drawing] Инициализирован');
@@ -200,17 +219,27 @@ export class Drawing {
     this.active = true;
     this.chatId = chatId;
 
+    // Если canvas нет — создаём
+    if (!this.canvas || !this.canvas.isConnected) {
+      console.log('[Drawing] Canvas нет, создаю в enable()');
+      this.init(document.querySelector('.conversation'));
+    }
+
     // Загружаем рисунки
     this.strokes = this._load(chatId);
-    this._resize();
-    this._redrawAll();
 
-    // ✅ ГЛАВНОЕ: делаем canvas КЛИКАБЕЛЬНЫМ
+    // Ресайз + перерисовка
+    setTimeout(() => {
+      this._resize();
+      this._redrawAll();
+    }, 50);
+
+    // ✅ Делаем canvas кликабельным
     if (this.canvas) {
       this.canvas.style.pointerEvents = 'auto';
       this.canvas.style.cursor = 'crosshair';
-      this.canvas.style.zIndex = '10';  // поверх сообщений при рисовании
-      console.log('[Drawing] canvas активен, pointer-events: auto');
+      this.canvas.style.zIndex = '10';
+      console.log('[Drawing] Canvas активен, pointerEvents:', this.canvas.style.pointerEvents);
     }
 
     // Сообщения не перехватывают клики
@@ -219,7 +248,7 @@ export class Drawing {
       messagesEl.style.pointerEvents = 'none';
     }
 
-    // Отключаем скролл пока рисуешь
+    document.body.classList.add('drawing-active');
     document.body.style.userSelect = 'none';
 
     console.log('[Drawing] Режим включён, рисунков:', this.strokes.length);
