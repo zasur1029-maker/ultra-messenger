@@ -1221,3 +1221,27 @@
   left: 16px !important;
   z-index: 60 !important;
 }
+
+/* ============================================================
+   Drawing: canvas кликабельный при рисовании
+   ============================================================ */
+.drawing-canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  pointer-events: none;
+  z-index: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+/* Когда рисуем — canvas кликабельный */
+body.drawing-active .drawing-canvas {
+  pointer-events: auto !important;
+  cursor: crosshair !important;
+}
+
+body.drawing-active .messages {
+  pointer-events: none !important;
+}

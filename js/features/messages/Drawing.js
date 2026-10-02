@@ -200,39 +200,49 @@ export class Drawing {
     this.active = true;
     this.chatId = chatId;
 
+    // Загружаем рисунки
     this.strokes = this._load(chatId);
     this._resize();
     this._redrawAll();
 
+    // ✅ ГЛАВНОЕ: делаем canvas КЛИКАБЕЛЬНЫМ
     if (this.canvas) {
       this.canvas.style.pointerEvents = 'auto';
-      this.canvas.style.cursor = this.tool === 'eraser' ? 'cell' : 'crosshair';
-      this.canvas.style.transform = 'translateY(0)';
+      this.canvas.style.cursor = 'crosshair';
+      this.canvas.style.zIndex = '10';  // поверх сообщений при рисовании
+      console.log('[Drawing] canvas активен, pointer-events: auto');
     }
 
     // Сообщения не перехватывают клики
     const messagesEl = document.querySelector('.messages');
     if (messagesEl) {
-      // Делаем bubble прозрачными для кликов
-      messagesEl.style.userSelect = 'none';
+      messagesEl.style.pointerEvents = 'none';
     }
 
-    console.log('[Drawing] Режим включён для чата', chatId, '— рисунков:', this.strokes.length);
+    // Отключаем скролл пока рисуешь
+    document.body.style.userSelect = 'none';
+
+    console.log('[Drawing] Режим включён, рисунков:', this.strokes.length);
   }
 
   /** Выключить */
   disable() {
     this.active = false;
 
+    // Возвращаем canvas в пассивный режим
     if (this.canvas) {
       this.canvas.style.pointerEvents = 'none';
       this.canvas.style.cursor = 'default';
+      this.canvas.style.zIndex = '0';
     }
 
+    // Возвращаем сообщениям клики
     const messagesEl = document.querySelector('.messages');
     if (messagesEl) {
-      messagesEl.style.userSelect = '';
+      messagesEl.style.pointerEvents = '';
     }
+
+    document.body.style.userSelect = '';
 
     console.log('[Drawing] Режим выключен');
   }

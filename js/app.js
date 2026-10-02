@@ -582,6 +582,7 @@ const APP = {
 
   _showDrawingToolbar() {
     console.log('[Drawing Toolbar] Открываю панель');
+    document.body.classList.add('drawing-active');
     document.querySelector('.drawing-toolbar')?.remove();
     document.querySelector('.drawing-counter')?.remove();
 
@@ -741,6 +742,7 @@ const APP = {
 
   _closeDrawingUI() {
     console.log('[Drawing Toolbar] Закрываю');
+    document.body.classList.remove('drawing-active');
     document.querySelector('.drawing-toolbar')?.remove();
     document.querySelector('.drawing-counter')?.remove();
     if (this.drawing) {
