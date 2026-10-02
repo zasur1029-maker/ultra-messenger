@@ -73,8 +73,8 @@ export class Drawing {
 
     // ResizeObserver
     try {
-      this.resizeObserver = new ResizeObserver(() => this._resize());
-      this.resizeObserver.observe(messagesEl);
+      // ResizeObserver отключён — вызывает лаги
+      // observe отключён
     } catch (e) {}
 
     // События мыши
@@ -104,44 +104,29 @@ export class Drawing {
 
   /** Ресайз с защитой от null */
   _resize() {
-    if (!this.canvas || !this.container) {
-      return;  // тихо игнорируем
-      return;
-    }
-
-    if (!this.canvas.isConnected) {
-      return;
-    }
+    if (!this.canvas || !this.container) return;
+    if (!this.canvas.isConnected) return;
 
     const dpr = window.devicePixelRatio || 1;
     const width = this.container.clientWidth;
-    // Высота = максимальная из scrollHeight и clientHeight
     const height = Math.max(this.container.scrollHeight, this.container.clientHeight);
 
     if (width === 0 || height === 0) {
-      // Ещё не отрисовано — подождём
       setTimeout(() => this._resize(), 100);
       return;
     }
 
-    // Сохраняем старый canvas как картинку
-    let oldImage = null;
-    if (this.canvas.width > 0 && this.canvas.height > 0) {
-      try {
-        oldImage = this.canvas.toDataURL();
-      } catch {}
+    // Не пересоздаём если размеры не изменились
+    if (this.canvas.width === width * dpr && this.canvas.height === height * dpr) {
+      return;
     }
 
-    // Новый размер
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
 
-    // Сброс трансформации и масштаб
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // Перерисовка штрихов
     this._redrawAll();
   }
 
@@ -220,39 +205,34 @@ export class Drawing {
     this.active = true;
     this.chatId = chatId;
 
-    // Если canvas нет — создаём
-    if (!this.canvas || !this.canvas.isConnected) {
-      console.log('[Drawing] Canvas нет, создаю в enable()');
+    // Если canvas нет или сменился чат — пересоздаём
+    const messagesEl = document.querySelector('.messages');
+    if (!this.canvas || !this.canvas.isConnected || !messagesEl) {
+      this.canvas = null;
       this.init(document.querySelector('.conversation'));
     }
 
-    // Загружаем рисунки
+    if (!messagesEl) return;
+
+    // Ресайз ПОД КОНКРЕТНЫЙ чат
+    this._resize();
     this.strokes = this._load(chatId);
+    this._redrawAll();
 
-    // Ресайз + перерисовка
-    setTimeout(() => {
-      this._resize();
-      this._redrawAll();
-    }, 50);
-
-    // ✅ Делаем canvas кликабельным
+    // Canvas кликабельный
     if (this.canvas) {
       this.canvas.style.pointerEvents = 'auto';
       this.canvas.style.cursor = 'crosshair';
       this.canvas.style.zIndex = '10';
-      console.log('[Drawing] Canvas активен, pointerEvents:', this.canvas.style.pointerEvents);
     }
 
     // Сообщения не перехватывают клики
-    const messagesEl = document.querySelector('.messages');
-    if (messagesEl) {
-      messagesEl.style.pointerEvents = 'none';
-    }
+    messagesEl.style.pointerEvents = 'none';
 
     document.body.classList.add('drawing-active');
     document.body.style.userSelect = 'none';
 
-    console.log('[Drawing] Режим включён, рисунков:', this.strokes.length);
+    console.log('[Drawing] Режим включён для', chatId, '— рисунков:', this.strokes.length);
   }
 
   /** Выключить */
@@ -346,6 +326,7 @@ export class Drawing {
 
   /** Обновить счётчик */
   _updateCounter() {
+    return; // отключено
     const counter = document.querySelector('.drawing-counter');
     if (counter) counter.textContent = '🎨 ' + this.strokes.length + ' шт.';
   }
@@ -436,17 +417,21 @@ export class Drawing {
   _save() {
     if (!this.chatId) return;
 
-    // 1. Локально
+    // Локально — сразу
     try {
       const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       all[this.chatId] = this.strokes;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     } catch (e) {}
 
-    // 2. НА СЕРВЕР — через WebSocket (мгновенно)
-    import('../../data/Sync.js').then(({ Sync }) => {
-      Sync.sendDrawing(this.chatId, this.strokes);
-    }).catch(() => {});
+    // НА СЕРВЕР — с задержкой (debounce), чтобы не лагало
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      import('../../data/Sync.js').then(({ Sync }) => {
+        Sync.sendDrawing(this.chatId, this.strokes);
+        console.log('[Drawing] Отправлено на сервер:', this.strokes.length, 'штрихов');
+      }).catch(() => {});
+    }, 800);
   }
 
   /** Уничтожить */

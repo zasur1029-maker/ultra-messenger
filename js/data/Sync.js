@@ -106,12 +106,16 @@ export const Sync = {
 
       case 'drawings:update': {
         const { chatId, strokes } = msg;
-        if (window.__DRAWING__) {
-          window.__DRAWING__.strokes = strokes || [];
-          window.__DRAWING__._redrawAll();
-          window.__DRAWING__._updateCounter?.();
-          console.log('[Sync] 🎨 Рисунки обновлены с сервера');
-        }
+        const drawing = window.__DRAWING__;
+        if (!drawing) break;
+        // Применяем ТОЛЬКО если чат активен
+        if (drawing.chatId !== chatId) break;
+        // Не перерисовываем если я сам только что нарисовал
+        if (drawing.active) break;
+        
+        drawing.strokes = strokes || [];
+        drawing._redrawAll();
+        console.log('[Sync] 🎨 Рисунки обновлены с сервера');
         break;
       }
 
