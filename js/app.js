@@ -148,6 +148,7 @@ const APP = {
     // === DRAWING init ===
     import('./features/messages/Drawing.js').then(({ Drawing }) => {
       this.drawing = new Drawing();
+      window.__DRAWING__ = this.drawing;
       const convEl = document.querySelector('.conversation');
       if (convEl) this.drawing.init(convEl);
 

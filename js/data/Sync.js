@@ -104,6 +104,17 @@ export const Sync = {
         } catch (e) {}
         break;
 
+      case 'drawings:update': {
+        const { chatId, strokes } = msg;
+        if (window.__DRAWING__) {
+          window.__DRAWING__.strokes = strokes || [];
+          window.__DRAWING__._redrawAll();
+          window.__DRAWING__._updateCounter?.();
+          console.log('[Sync] 🎨 Рисунки обновлены с сервера');
+        }
+        break;
+      }
+
       case 'messages:update': {
         const m = msg.message;
         if (!store.state.messages[m.chatId]) store.state.messages[m.chatId] = [];
@@ -166,6 +177,10 @@ export const Sync = {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
       osc.start(); osc.stop(ctx.currentTime + 0.2);
     } catch (e) {}
+  },
+
+  sendDrawing(chatId, strokes) {
+    this.send({ type: 'drawing', drawing: { chatId, strokes } });
   },
 
   sendMessage(message) {

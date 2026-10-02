@@ -60,6 +60,7 @@ export class Drawing {
     // Вставляем как первый ребёнок
     messagesEl.insertBefore(canvas, messagesEl.firstChild);
     this.canvas = canvas;
+    window.__DRAWING__ = this;
     this.ctx = canvas.getContext('2d');
 
     console.log('[Drawing] Canvas создан. В DOM:', canvas.isConnected);
@@ -434,13 +435,18 @@ export class Drawing {
 
   _save() {
     if (!this.chatId) return;
+
+    // 1. Локально
     try {
       const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       all[this.chatId] = this.strokes;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    } catch (e) {
-      console.warn('[Drawing] Не удалось сохранить:', e);
-    }
+    } catch (e) {}
+
+    // 2. НА СЕРВЕР — через WebSocket (мгновенно)
+    import('../../data/Sync.js').then(({ Sync }) => {
+      Sync.sendDrawing(this.chatId, this.strokes);
+    }).catch(() => {});
   }
 
   /** Уничтожить */

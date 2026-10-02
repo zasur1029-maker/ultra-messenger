@@ -51,6 +51,14 @@ async function initDB() {
       );
     `);
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS drawings (
+        id TEXT PRIMARY KEY,
+        chat_id TEXT,
+        data JSONB,
+        updated_at BIGINT
+      );
+    `);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
         chat_id TEXT,
@@ -85,8 +93,10 @@ app.get('/api/data', async (req, res) => {
     const users = (await pool.query('SELECT * FROM users')).rows;
     const chats = (await pool.query('SELECT * FROM chats')).rows;
     const messages = (await pool.query('SELECT * FROM messages ORDER BY created_at ASC')).rows;
+    const drawingsRes = (await pool.query('SELECT * FROM drawings')).rows;
 
     res.json({
+      drawings: drawingsRes.map((r) => ({ chatId: r.chat_id, strokes: r.data || [], updatedAt: Number(r.updated_at) })),
       users: users.map((r) => ({
         id: r.id, username: r.username, name: r.name,
         avatar: r.avatar, gradient: r.gradient, bio: r.bio,
@@ -270,6 +280,21 @@ wss.on('connection', async (ws) => {
         );
       } catch (e) { console.error('Insert chat:', e.message); }
       broadcast({ type: 'chats:refresh' }, ws);
+      return;
+    }
+
+    // Drawing
+    if (msg.type === 'drawing') {
+      const d = msg.drawing;
+      try {
+        await pool.query(
+          `INSERT INTO drawings (id, chat_id, data, updated_at)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
+          [d.chatId, d.chatId, JSON.stringify(d.strokes || []), Date.now()]
+        );
+      } catch (e) { console.error('Drawing WS:', e.message); }
+      broadcast({ type: 'drawings:update', chatId: d.chatId, strokes: d.strokes }, ws);
       return;
     }
 
