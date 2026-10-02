@@ -200,39 +200,48 @@ wss.on('connection', async (ws) => {
 
   ws.on('close', () => clients.delete(ws));
   ws.on('message', async (raw) => {
+    let msg;
     try {
-      const msg = JSON.parse(raw);
-      
-      if (msg.type === 'online') {
+      msg = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+
+    // Online
+    if (msg.type === 'online') {
+      try {
         await pool.query(
           `INSERT INTO users_online (username, online, last_seen) VALUES ($1, $2, $3)
            ON CONFLICT (username) DO UPDATE SET online = EXCLUDED.online, last_seen = EXCLUDED.last_seen`,
           [msg.username, msg.online, Date.now()]
         );
-        broadcast({ type: 'user:online', username: msg.username, online: msg.online }, ws);
-        return;
-      }
-      
-      if (msg.type === 'typing') {
-        broadcast({ type: 'user:typing', username: msg.username, chatId: msg.chatId, typing: msg.typing }, ws);
-        return;
-      }
-      
-      if (msg.type === 'mark-read') {
+      } catch (e) {}
+      broadcast({ type: 'user:online', username: msg.username, online: msg.online }, ws);
+      return;
+    }
+
+    // Typing
+    if (msg.type === 'typing') {
+      broadcast({ type: 'user:typing', username: msg.username, chatId: msg.chatId, typing: msg.typing }, ws);
+      return;
+    }
+
+    // Mark read
+    if (msg.type === 'mark-read') {
+      try {
         await pool.query(
           `UPDATE messages SET status = 'read' WHERE chat_id = $1 AND author_id != $2 AND status != 'read'`,
           [msg.chatId, msg.readerId]
         );
-        broadcast({ type: 'message:read', chatId: msg.chatId, readerId: msg.readerId }, ws);
-        return;
-      }
-    } catch (e) {}
+      } catch (e) {}
+      broadcast({ type: 'message:read', chatId: msg.chatId, readerId: msg.readerId }, ws);
+      return;
+    }
 
-    try {
-    try {
-      const msg = JSON.parse(raw);
-      if (msg.type === 'message') {
-        const m = msg.message;
+    // Message
+    if (msg.type === 'message') {
+      const m = msg.message;
+      try {
         await pool.query(
           `INSERT INTO messages (id, chat_id, author_id, author_name, text, type, attachments, reactions, data, status, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -242,10 +251,15 @@ wss.on('connection', async (ws) => {
            JSON.stringify(m.reactions || {}), JSON.stringify(m),
            m.status || 'sent', m.createdAt || Date.now()]
         );
-        broadcast({ type: 'messages:update', message: m }, ws);
-      }
-      if (msg.type === 'chat') {
-        const c = msg.chat;
+      } catch (e) { console.error('Insert message:', e.message); }
+      broadcast({ type: 'messages:update', message: m }, ws);
+      return;
+    }
+
+    // Chat
+    if (msg.type === 'chat') {
+      const c = msg.chat;
+      try {
         await pool.query(
           `INSERT INTO chats (id, type, title, gradient, avatar, participants, data, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -254,9 +268,29 @@ wss.on('connection', async (ws) => {
            JSON.stringify(c.participants || []), JSON.stringify(c),
            c.createdAt || Date.now(), c.updatedAt || Date.now()]
         );
-        broadcast({ type: 'chats:refresh' }, ws);
-      }
-    } catch (e) { console.error(e.message); }
+      } catch (e) { console.error('Insert chat:', e.message); }
+      broadcast({ type: 'chats:refresh' }, ws);
+      return;
+    }
+
+    // User
+    if (msg.type === 'user') {
+      const u = msg.user;
+      try {
+        await pool.query(
+          `INSERT INTO users (id, username, name, avatar, gradient, bio, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (username) DO UPDATE SET
+             name = EXCLUDED.name,
+             avatar = EXCLUDED.avatar,
+             gradient = EXCLUDED.gradient`,
+          [u.id || u.username, u.username, u.name, u.avatar || null,
+           u.gradient || null, u.bio || '', u.createdAt || Date.now()]
+        );
+      } catch (e) { console.error('Insert user:', e.message); }
+      broadcast({ type: 'users:refresh' }, ws);
+      return;
+    }
   });
 });
 
