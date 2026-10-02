@@ -1158,3 +1158,19 @@
   0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-3px); }
 }
+
+/* ============================================================
+   Галочки статусов сообщений
+   ============================================================ */
+.bubble__meta svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bubble__meta .check--delivered {
+  color: var(--color-text-tertiary);
+}
+
+.bubble__meta .check--read {
+  color: #4fc3f7 !important;
+}

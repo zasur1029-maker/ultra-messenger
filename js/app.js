@@ -88,6 +88,15 @@ const APP = {
 
     this._bindGlobal();
 
+    // Отправляем онлайн статус
+    setTimeout(() => {
+      import('./data/Sync.js').then(({ Sync }) => {
+        if (store.state.user?.username) {
+          Sync.setOnline(store.state.user.username, true);
+        }
+      });
+    }, 2000);
+
     if (store.state.activeChatId) {
       this._openChat(store.state.activeChatId);
     }
@@ -458,6 +467,33 @@ const APP = {
       }
     }, 5000);
 
+    // Индикатор «печатает»
+    bus.on('users:typing', ({ chatId, username, typing }) => {
+      if (chatId !== store.state.activeChatId) return;
+      const statusEl = document.getElementById('convStatus');
+      if (!statusEl) return;
+      if (typing) {
+        statusEl.innerHTML = '<span style="color: var(--color-accent);">печатает…</span>';
+        clearTimeout(window.__typingTimeout);
+        window.__typingTimeout = setTimeout(() => {
+          const chat = store.state.chats.find((c) => c.id === chatId);
+          if (chat) {
+            const s = getChatStatusText(chat);
+            statusEl.textContent = s;
+          }
+        }, 3000);
+      }
+    });
+
+    // Обработка онлайн статуса
+    bus.on('users:status', ({ username, status }) => {
+      const chat = store.state.chats.find((c) => c.participants?.some((p) => p.id === username));
+      if (!chat || chat.id !== store.state.activeChatId) return;
+      const statusEl = document.getElementById('convStatus');
+      if (!statusEl) return;
+      statusEl.textContent = status.online ? 'онлайн' : 'не в сети';
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -526,6 +562,19 @@ const APP = {
     bus.emit('messages:render');
     this.messageList.scrollToBottom(false);
     setTimeout(() => this.composer.focus(), 100);
+
+    // Отмечаем все входящие как прочитанные
+    try {
+      const { Sync } = await import('./data/Sync.js');
+      Sync.markRead(chatId, store.state.user.username);
+      // Локально тоже обновляем
+      const list = store.state.messages[chatId] || [];
+      list.forEach((m) => {
+        if (m.authorId !== store.state.user.username && m.status !== 'read') {
+          m.status = 'read';
+        }
+      });
+    } catch (e) {}
 
     const userKey = this.getUserKey();
     DB.put('meta', { key: `activeChatId:${userKey}`, value: chatId });
@@ -848,3 +897,18 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif"><h1>Ошибка запуска</h1><p style="color:#666">' + e.message + '</p><button onclick="location.reload()" style="padding:12px 24px;border-radius:8px;border:none;background:#2aabee;color:#fff;cursor:pointer">Перезагрузить</button></div>';
   });
 });
+
+
+function getChatStatusText(chat) {
+  if (chat.type === 'bot') return 'бот';
+  if (chat.type === 'group') return `${(chat.participants || []).length} участников`;
+  if (chat.type === 'channel') return 'канал';
+  if (chat.type === 'saved') return 'сохранённые';
+  const me = window.__STORE__?.state?.user;
+  const partner = (chat.participants || []).find((p) => p.id !== me?.username);
+  if (partner) {
+    const online = window.__STORE__?.state?.onlineUsers?.[partner.id];
+    return online ? 'онлайн' : 'не в сети';
+  }
+  return 'онлайн';
+}

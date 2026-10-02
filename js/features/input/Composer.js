@@ -71,9 +71,27 @@ export class Composer {
     bus.on('ui:editChanged', (msg) => this._renderEditPreview(msg));
 
     // Отслеживание печати
-    const onTyping = debounce(() => bus.emit('user:stoppedTyping'), 1500);
+    const onTyping = debounce(() => {
+      bus.emit('user:stoppedTyping');
+      const chatId = store.state.activeChatId;
+      if (chatId) {
+        import('../../data/Sync.js').then(({ Sync }) => {
+          if (store.state.user?.username) {
+            Sync.setTyping(store.state.user.username, chatId, false);
+          }
+        });
+      }
+    }, 1500);
     this.input.addEventListener('input', () => {
       bus.emit('user:typing');
+      const chatId = store.state.activeChatId;
+      if (chatId) {
+        import('../../data/Sync.js').then(({ Sync }) => {
+          if (store.state.user?.username) {
+            Sync.setTyping(store.state.user.username, chatId, true);
+          }
+        });
+      }
       onTyping();
     });
   }
@@ -147,7 +165,23 @@ export class Composer {
     this.focus();
 
     // СТАТУСЫ
-    setTimeout(() => { msg.status = 'sent'; bus.emit('messages:update', { chatId, message: msg }); }, 300);
+    // Статус: sending → sent (когда сервер принял)
+    setTimeout(() => {
+      if (msg.status === 'sending') {
+        msg.status = 'sent';
+        bus.emit('messages:update', { chatId, message: msg });
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage({...msg}));
+      }
+    }, 500);
+
+    // delivered — когда сервер подтвердил
+    setTimeout(() => {
+      if (msg.status === 'sent') {
+        msg.status = 'delivered';
+        bus.emit('messages:update', { chatId, message: msg });
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage({...msg}));
+      }
+    }, 1500);
     setTimeout(() => { msg.status = 'delivered'; bus.emit('messages:update', { chatId, message: msg }); }, 700);
   }
 

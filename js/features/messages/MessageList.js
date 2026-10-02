@@ -297,9 +297,20 @@ export class MessageList {
     if (msg.edited) meta.append(el('span', { class: 'msg--edited', text: 'ред. ' }));
     meta.append(el('span', { text: formatTime(msg.createdAt) }));
     if (isOut) {
-      const checkIcon = msg.status === 'read' ? 'doubleCheck' : msg.status === 'delivered' ? 'doubleCheck' : msg.status === 'sending' ? 'clock' : 'check';
+      let checkIcon, checkClass = '';
+      if (msg.status === 'read') {
+        checkIcon = 'doubleCheck';
+        checkClass = 'check--read';
+      } else if (msg.status === 'delivered') {
+        checkIcon = 'doubleCheck';
+        checkClass = 'check--delivered';
+      } else if (msg.status === 'sent') {
+        checkIcon = 'check';
+      } else {
+        checkIcon = 'clock';
+      }
       const check = icon(checkIcon, 14, 2);
-      if (msg.status === 'read') check.classList.add('check--read');
+      if (checkClass) check.classList.add(checkClass);
       meta.append(check);
     }
     bubble.append(meta);
