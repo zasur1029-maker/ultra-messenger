@@ -108,7 +108,7 @@ export class Drawing {
     }
 
     if (!this.canvas.isConnected) {
-      return;  // тихо игнорируем
+      return;
     }
 
     const dpr = window.devicePixelRatio || 1;
