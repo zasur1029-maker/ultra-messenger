@@ -119,7 +119,12 @@ export class Composer {
       body: JSON.stringify(msg)
     }).catch((err) => console.warn('[Composer] Ошибка отправки:', err));
 
-    console.log('[Composer] Сообщение отправлено на сервер:', msg.id);
+    console.log('[Composer] Сообщение отправлено:', msg.id);
+    import('../../data/Sync.js').then(({ Sync }) => {
+      Sync.sendMessage(msg);
+      const chat = store.state.chats.find((x) => x.id === chatId);
+      if (chat) Sync.sendChat(chat);
+    }).catch(() => {});
 
     console.log('[Composer] Отправляю:', msg);
 

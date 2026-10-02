@@ -20,6 +20,13 @@ const pool = new Pool({
 async function initDB() {
   try {
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS users_online (
+        username TEXT PRIMARY KEY,
+        online BOOLEAN,
+        last_seen BIGINT
+      );
+    `);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
@@ -193,6 +200,35 @@ wss.on('connection', async (ws) => {
 
   ws.on('close', () => clients.delete(ws));
   ws.on('message', async (raw) => {
+    try {
+      const msg = JSON.parse(raw);
+      
+      if (msg.type === 'online') {
+        await pool.query(
+          `INSERT INTO users_online (username, online, last_seen) VALUES ($1, $2, $3)
+           ON CONFLICT (username) DO UPDATE SET online = EXCLUDED.online, last_seen = EXCLUDED.last_seen`,
+          [msg.username, msg.online, Date.now()]
+        );
+        broadcast({ type: 'user:online', username: msg.username, online: msg.online }, ws);
+        return;
+      }
+      
+      if (msg.type === 'typing') {
+        broadcast({ type: 'user:typing', username: msg.username, chatId: msg.chatId, typing: msg.typing }, ws);
+        return;
+      }
+      
+      if (msg.type === 'mark-read') {
+        await pool.query(
+          `UPDATE messages SET status = 'read' WHERE chat_id = $1 AND author_id != $2 AND status != 'read'`,
+          [msg.chatId, msg.readerId]
+        );
+        broadcast({ type: 'message:read', chatId: msg.chatId, readerId: msg.readerId }, ws);
+        return;
+      }
+    } catch (e) {}
+
+    try {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === 'message') {

@@ -18,6 +18,7 @@ export class MessageList {
     this.scrollDownBtn = document.getElementById('scrollDown');
     this.scrollDownBadge = document.getElementById('scrollDownBadge');
     this.autoScroll = true;
+    this.displayLimit = 300;  // сколько сообщений показывать
     this.unreadBelow = 0;
     this._bindScroll();
     bus.on('messages:render', () => this.render());
@@ -40,7 +41,12 @@ export class MessageList {
   render() {
     const chatId = store.state.activeChatId;
     if (!chatId) { this.container.replaceChildren(); return; }
-    const messages = store.state.messages[chatId] || [];
+    const allMessages = store.state.messages[chatId] || [];
+    // Показываем только последние displayLimit
+    const messages = allMessages.slice(-this.displayLimit);
+    const hasMore = allMessages.length > this.displayLimit;
+    this._hasMore = hasMore;
+    this._totalMessages = allMessages.length;
     const chat = store.state.chats.find((c) => c.id === chatId);
     if (!chat) return;
 
@@ -419,6 +425,7 @@ export class MessageList {
 
   scrollToBottom(smooth = true) {
     this.autoScroll = true;
+    this.displayLimit = 300;  // сколько сообщений показывать
     this.unreadBelow = 0;
     this.scrollDownBadge.textContent = '';
     this.scrollDownBtn.hidden = true;
