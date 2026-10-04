@@ -104,28 +104,7 @@ export const Sync = {
         if (!store.state.messages[m.chatId]) store.state.messages[m.chatId] = [];
         const existing = store.state.messages[m.chatId].find((x) => x.id === m.id);
         
-        // Если сообщение без attachments (уведомление) — подгружаем с сервера
-        if (!m.attachments || m.attachments.length === 0) {
-          fetch('/api/data').then((r) => r.json()).then((data) => {
-            const full = (data.messages || []).find((x) => x.id === m.id);
-            if (full) {
-              if (!store.state.messages[full.chatId]) store.state.messages[full.chatId] = [];
-              const idx = store.state.messages[full.chatId].findIndex((x) => x.id === full.id);
-              if (idx >= 0) {
-                Object.assign(store.state.messages[full.chatId][idx], full);
-              } else {
-                store.state.messages[full.chatId].push(full);
-              }
-              bus.emit('messages:render');
-              console.log('[Sync] 📩 Загружено с сервера:', full.type);
-            }
-          }).catch(() => {});
-          bus.emit('chats:update');
-          this._sound();
-          break;
-        }
-        
-        // Обычное сообщение
+        // Просто добавляем/обновляем локально
         if (existing) {
           Object.assign(existing, m);
           bus.emit('messages:update', { chatId: m.chatId, message: existing });

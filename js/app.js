@@ -361,28 +361,23 @@ const APP = {
       if (this.settings.settings.theme === 'auto') this.settings._applyAll();
     });
 
-    // Периодическая синхронизация с сервером (каждые 5 секунд)
+    // Периодическая синхронизация — редко, только для подстраховки
     setInterval(async () => {
+      // Не синхронизируем если недавно получали сообщения
+      if (this._lastMessageTime && Date.now() - this._lastMessageTime < 10000) return;
+      
       try {
         const res = await fetch('/api/data');
         const data = await res.json();
         
         let changed = false;
         
-        // Пользователи
-        if (data.users) {
-          for (const u of data.users) {
-            await DB.put('users', u);
-          }
-        }
-        
-        // Чаты
+        // Обновляем только если количество изменилось
         if (data.chats && data.chats.length !== store.state.chats.length) {
           store.state.chats = data.chats;
           changed = true;
         }
         
-        // Сообщения
         if (data.messages) {
           const byChat = {};
           data.messages.forEach((m) => {
@@ -390,7 +385,6 @@ const APP = {
             byChat[m.chatId].push(m);
           });
           
-          // Проверяем изменения
           for (const chatId in byChat) {
             const oldCount = (store.state.messages[chatId] || []).length;
             const newCount = byChat[chatId].length;
@@ -403,13 +397,9 @@ const APP = {
         
         if (changed) {
           bus.emit('chats:update');
-          // Не дёргаем render — это вызывает лаги
-          // bus.emit('messages:render');
         }
-      } catch (e) {
-        // сервер недоступен — нормально
-      }
-    }, 5000);
+      } catch (e) {}
+    }, 30000); // было 5000 → стало 30000
 
     // Индикатор «печатает»
     bus.on('users:typing', ({ chatId, username, typing }) => {

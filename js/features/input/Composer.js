@@ -140,24 +140,16 @@ export class Composer {
 
     // === СТАТУСЫ ===
     // sending → sent (0.5 сек)
-    setTimeout(() => {
-      if (msg.status === 'sending') {
-        msg.status = 'sent';
-        bus.emit('messages:update', { chatId, message: msg });
-        console.log('[Composer] → sent');
-        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
-      }
-    }, 500);
+    // Сразу sent (WebSocket уведомит остальных)
+    msg.status = 'sent';
+    bus.emit('messages:update', { chatId, message: msg });
+    import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
 
     // sent → delivered (1.5 сек)
-    setTimeout(() => {
-      if (msg.status === 'sent') {
-        msg.status = 'delivered';
-        bus.emit('messages:update', { chatId, message: msg });
-        console.log('[Composer] → delivered');
-        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
-      }
-    }, 1500);
+    // Сразу delivered
+    msg.status = 'delivered';
+    bus.emit('messages:update', { chatId, message: msg });
+    import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
 
     // Отправка через WebSocket сразу
     import('../../data/Sync.js').then(({ Sync }) => {
