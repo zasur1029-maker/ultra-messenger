@@ -134,11 +134,11 @@
 .conversation {
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: #0f0f0f;
   position: relative;
   min-width: 0;
   overflow: hidden;
-  z-index: 2;
+  isolation: isolate;
 }
 
 .empty {
@@ -182,14 +182,9 @@
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   position: relative;
   z-index: 2;
-  background-color: #0f0f0f;
-  background-image: url('../../assets/patterns/pattern.svg');
-  background-repeat: repeat;
-  background-size: 420px 863px;
-  background-position: center;
 }
 
 /* ========= COMPOSER ========= */
@@ -219,22 +214,13 @@
 
 /* ========= MOBILE ========= */
 @media (max-width: 768px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: absolute; inset: 0;
-    z-index: 2;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .app.has-conv .sidebar { transform: translateX(-100%); }
-  .conversation {
-    position: absolute; inset: 0;
-    z-index: 3;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    visibility: hidden;
-  }
-  .app.has-conv .conversation { transform: translateX(0); visibility: visible; }
-  .icon-btn--mobile { display: grid !important; }
+  .app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100dvh;
+  background: #0f0f0f;
+  position: relative;
+  overflow: hidden;
 }
 .icon-btn--mobile { display: none; }
 
@@ -255,16 +241,10 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  background: rgba(33, 33, 33, 0.85);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #212121;
+  border-right: 1px solid #2f2f2f;
   position: relative;
   overflow: hidden;
-  z-index: 2;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* ========= CONVERSATION — парящий ========= */
