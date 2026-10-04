@@ -132,11 +132,16 @@
 
 /* ========= CONVERSATION ========= */
 .conversation {
-  display: flex; flex-direction: column;
-  background: var(--color-bg-chat);
+  display: flex;
+  flex-direction: column;
+  background: #0f0f0f;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
   min-width: 0;
   overflow: hidden;
+  z-index: 2;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .empty {
@@ -183,6 +188,11 @@
   gap: 1px;
   position: relative;
   z-index: 2;
+  background-color: #0f0f0f;
+  background-image: url('../../assets/patterns/pattern.svg');
+  background-repeat: repeat;
+  background-size: 420px 863px;
+  background-position: center;
 }
 
 /* ========= COMPOSER ========= */
@@ -235,11 +245,7 @@
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
   height: 100dvh;
-  background-color: #0f0f0f;
-  background-image: url('../../assets/patterns/pattern.svg');
-  background-repeat: repeat;
-  background-size: 420px 863px;
-  background-position: center;
+  background: #0f0f0f;
   position: relative;
   overflow: hidden;
   padding: 8px;
@@ -247,14 +253,7 @@
 }
 
 /* Затемнение паттерна */
-.app::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 15, 15, 0.5);
-  pointer-events: none;
-  z-index: 0;
-}
+
 
 /* ========= SIDEBAR — парящий ========= */
 .sidebar {
