@@ -1847,3 +1847,121 @@
     backdrop-filter: none !important;
   }
 }
+
+/* ============================================================
+   ⚡ ПРОИЗВОДИТЕЛЬНОСТЬ НА МОБИЛЬНЫХ (iPhone)
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* ❌ УБИРАЕМ backdrop-filter — он ОЧЕНЬ тормозит на iOS */
+  .sidebar__header,
+  .filters,
+  .conv-header,
+  .composer,
+  .toast,
+  .ctx,
+  .modal,
+  .dropdown,
+  .attach-menu,
+  .emoji-picker {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ❌ УБИРАЕМ паттерн SVG — 507 KB тормозит рендер */
+  .conversation::before,
+  .sidebar::before,
+  .messages::before,
+  .app::before {
+    display: none !important;
+  }
+
+  /* Чистый фон без паттерна */
+  .conversation,
+  .sidebar,
+  .messages {
+    background-image: none !important;
+  }
+
+  /* ❌ УБИРАЕМ тени с пузырей */
+  .bubble {
+    box-shadow: none !important;
+  }
+
+  /* ❌ УБИРАЕМ сложные градиенты */
+  .msg--out .bubble {
+    background: #766ac8 !important;
+  }
+
+  .msg--in .bubble {
+    background: #212121 !important;
+  }
+
+  /* ❌ УБИРАЕМ transition и animation */
+  * {
+    transition-duration: 0.1s !important;
+    animation-duration: 0.15s !important;
+  }
+
+  /* ❌ УБИРАЕМ сложные фильтры */
+  .avatar__online {
+    animation: none !important;
+  }
+
+  .fab {
+    box-shadow: none !important;
+  }
+
+  /* ✅ Оптимизация рендеринга */
+  .messages,
+  .chat-list {
+    -webkit-overflow-scrolling: touch !important;
+    contain: layout style paint !important;
+  }
+
+  .msg,
+  .bubble {
+    contain: layout style !important;
+  }
+
+  /* Меньше blur, меньше проблем */
+  .conv-header {
+    background: #212121 !important;
+  }
+
+  .composer {
+    background: #212121 !important;
+  }
+
+  .sidebar__header {
+    background: #212121 !important;
+  }
+
+  .filters {
+    background: #212121 !important;
+  }
+
+  /* Уменьшаем размер шрифта — меньше reflow */
+  body {
+    font-size: 14px !important;
+  }
+
+  /* Оптимизация анимации появления сообщения */
+  .msg {
+    animation: none !important;
+  }
+}
+
+/* Для старых iPhone (iOS < 15) */
+@supports (-webkit-touch-callout: none) {
+  .conversation::before,
+  .sidebar::before,
+  .messages::before {
+    display: none !important;
+  }
+  
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
