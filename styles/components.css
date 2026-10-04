@@ -1238,3 +1238,69 @@
 [data-theme="amoled"] .conversation::before {
   opacity: 0.4 !important;
 }
+
+/* ============================================================
+   🎨 ПАТТЕРН TG — ФИОЛЕТОВЫЙ (точный цвет)
+   ============================================================ */
+
+.conversation {
+  background-color: #0f0f0f !important;
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+/* Паттерн — фиолетовый через CSS-фильтр */
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 720px 1480px !important;
+  background-position: center !important;
+  opacity: 0.35 !important;
+  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Убираем градиентную плёнку — она портит */
+.conversation::after {
+  display: none !important;
+}
+
+/* Сообщения поверх */
+.messages {
+  position: relative !important;
+  z-index: 3 !important;
+  background: transparent !important;
+}
+
+.conv-header {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+.composer {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Светлая тема — темнее и мягче */
+[data-theme="light"] .conversation {
+  background-color: #f0f4f8 !important;
+}
+
+[data-theme="light"] .conversation::before {
+  opacity: 0.25 !important;
+  filter: invert(30%) sepia(30%) saturate(1200%) hue-rotate(200deg) brightness(50%) !important;
+}
+
+/* AMOLED — только паттерн, фон чёрный */
+[data-theme="amoled"] .conversation {
+  background-color: #000000 !important;
+}
+
+[data-theme="amoled"] .conversation::before {
+  opacity: 0.4 !important;
+}
