@@ -76,15 +76,7 @@ async function initDB() {
         created_at BIGINT
       );
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS drawings (
-        id TEXT PRIMARY KEY,
-        chat_id TEXT,
-        data JSONB,
-        updated_at BIGINT
-      );
-    `);
-    await pool.query(`
+        await pool.query(`
       CREATE TABLE IF NOT EXISTS users_online (
         username TEXT PRIMARY KEY,
         online BOOLEAN,
@@ -138,7 +130,6 @@ app.get('/api/data', async (req, res) => {
     const users = (await pool.query('SELECT * FROM users')).rows;
     const chats = (await pool.query('SELECT * FROM chats')).rows;
     const messages = (await pool.query('SELECT * FROM messages ORDER BY created_at ASC')).rows;
-    const drawingsRes = (await pool.query('SELECT * FROM drawings')).rows;
     const online = (await pool.query('SELECT * FROM users_online')).rows;
 
     res.json({
@@ -160,7 +151,6 @@ app.get('/api/data', async (req, res) => {
         attachments: r.attachments, reactions: r.reactions,
         status: r.status, createdAt: Number(r.created_at)
       })),
-      drawings: drawingsRes.map((r) => ({ chatId: r.chat_id, strokes: r.data || [], updatedAt: Number(r.updated_at) })),
       online: online.map((r) => ({ username: r.username, online: r.online, lastSeen: Number(r.last_seen) }))
     });
   } catch (e) {
@@ -234,16 +224,6 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
-app.delete('/api/drawings/all', async (req, res) => {
-  try {
-    await pool.query('DELETE FROM drawings');
-    broadcast({ type: 'drawings:clear-all' });
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // === WebSocket ===
 const clients = new Set();
 
@@ -256,7 +236,6 @@ wss.on('connection', async (ws) => {
     const users = (await pool.query('SELECT * FROM users')).rows;
     const chats = (await pool.query('SELECT * FROM chats')).rows;
     const messages = (await pool.query('SELECT * FROM messages ORDER BY created_at ASC')).rows;
-    const drawings = (await pool.query('SELECT * FROM drawings')).rows;
 
     ws.send(JSON.stringify({
       type: 'init',
@@ -264,7 +243,6 @@ wss.on('connection', async (ws) => {
         users: users.map((r) => ({ ...r, createdAt: Number(r.created_at) })),
         chats: chats.map((r) => ({ ...(r.data || {}), id: r.id, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) })),
         messages: messages.map((r) => ({ ...(r.data || {}), id: r.id, chatId: r.chat_id, createdAt: Number(r.created_at) })),
-        drawings: drawings.map((r) => ({ chatId: r.chat_id, strokes: r.data || [] }))
       }
     }));
   } catch (e) { console.error('Init error:', e.message); }

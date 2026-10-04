@@ -39,8 +39,6 @@ const APP = {
   settings: null,
   notifier: null,
   pwa: null,
-  drawing: null,
-  drawingBtn: null,
 
   getUserKey() {
     const u = store.state.user;
@@ -145,59 +143,6 @@ const APP = {
   },
 
   _bindGlobal() {
-    // === DRAWING init ===
-    import('./features/messages/Drawing.js').then(({ Drawing }) => {
-      this.drawing = new Drawing();
-      window.__DRAWING__ = this.drawing;
-      const convEl = document.querySelector('.conversation');
-      if (convEl) this.drawing.init(convEl);
-
-      // Опускаем рисунки при фокусе на composer
-      this.composer.input.addEventListener('focus', () => {
-        if (this.drawing.hasDrawings) this.drawing.slideDown();
-      });
-      this.composer.input.addEventListener('blur', () => {
-        if (this.drawing.hasDrawings && !this.drawing.active) this.drawing.slideUp();
-      });
-
-      // Смена чата — загрузка рисунков
-      bus.on('ui:openChat', (chatId) => {
-        if (this.drawing) {
-          this.drawing.strokes = this.drawing._load(chatId);
-          this.drawing.chatId = chatId;
-          this.drawing._redrawAll();
-        }
-      });
-
-      console.log('[App] Drawing подключён');
-    });
-
-    // Кнопка рисования в composer
-    const composerEl = document.getElementById('composer');
-    const emojiBtnEl = document.getElementById('emojiBtn');
-    if (composerEl && emojiBtnEl) {
-      const drawingBtn = document.createElement('button');
-      drawingBtn.type = 'button';
-      drawingBtn.className = 'icon-btn';
-      drawingBtn.title = 'Рисовать на фоне';
-      drawingBtn.setAttribute('aria-label', 'Режим рисования');
-      drawingBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>';
-      composerEl.insertBefore(drawingBtn, emojiBtnEl);
-      this.drawingBtn = drawingBtn;
-
-      drawingBtn.addEventListener('click', () => {
-        if (!this.drawing) { toast.error('Рисование загружается…'); return; }
-        const chatId = store.state.activeChatId;
-        if (!chatId) { toast.info('Откройте чат'); return; }
-
-        if (this.drawing.active) {
-          this._closeDrawingUI();
-        } else {
-          this.drawing.enable(chatId);
-          drawingBtn.style.color = 'var(--color-accent)';
-          this._showDrawingToolbar();
-        }
-      });
     }
 
     // === Остальные обработчики ===
@@ -553,22 +498,6 @@ const APP = {
       pinnedBar.hidden = true;
     }
 
-    // СОЗДАЁМ CANVAS если его нет (для этого чата)
-    if (this.drawing) {
-      const messagesEl = document.querySelector('.messages');
-      if (messagesEl && (!this.drawing.canvas || !this.drawing.canvas.isConnected)) {
-        console.log('[App] Создаю canvas для текущего чата');
-        this.drawing.canvas = null;  // сброс
-        this.drawing.init(document.querySelector('.conversation'));
-      }
-    }
-
-    // Загрузить рисунки для этого чата
-    if (this.drawing) {
-      this.drawing.strokes = this.drawing._load(chatId);
-      this.drawing.chatId = chatId;
-      this.drawing._redrawAll();
-    }
 
     bus.emit('messages:render');
     this.messageList.scrollToBottom(false);
@@ -591,179 +520,9 @@ const APP = {
     DB.put('meta', { key: `activeChatId:${userKey}`, value: chatId });
   },
 
-  _showDrawingToolbar() {
-    console.log('[Drawing Toolbar] Открываю панель');
-    document.body.classList.add('drawing-active');
-    document.querySelector('.drawing-toolbar')?.remove();
-    document.querySelector('.drawing-counter')?.remove();
-
-    const conv = document.querySelector('.conversation');
-    if (!conv) { console.warn('[Drawing Toolbar] .conversation не найден'); return; }
-
-    // Панель инструментов
-    const toolbar = document.createElement('div');
-    toolbar.className = 'drawing-toolbar';
-    toolbar.style.cssText = `
-      position: absolute;
-      bottom: 72px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      background: var(--color-bg-elevated);
-      border-radius: 999px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      z-index: 100;
-      max-width: calc(100% - 40px);
-      overflow-x: auto;
-      scrollbar-width: none;
-    `;
-
-    // Цвета
-    const colors = ['#2aabee', '#e53935', '#4caf50', '#ff9800', '#8b5cf6', '#000000', '#ffffff'];
-    colors.forEach((color, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'drawing-toolbar__color' + (i === 0 ? ' is-active' : '');
-      btn.style.cssText = 'width: 28px; height: 28px; border-radius: 50%; border: 2px solid ' + (i === 0 ? 'var(--color-text-primary)' : 'transparent') + '; background: ' + color + '; cursor: pointer; padding: 0; flex-shrink: 0;';
-      btn.addEventListener('click', () => {
-        toolbar.querySelectorAll('.drawing-toolbar__color').forEach((b) => { b.style.borderColor = 'transparent'; });
-        btn.style.borderColor = 'var(--color-text-primary)';
-        if (this.drawing) { this.drawing.setColor(color); this.drawing.setTool('pen'); }
-      });
-      toolbar.appendChild(btn);
-    });
-
-    // Разделитель
-    const div1 = document.createElement('div');
-    div1.style.cssText = 'width: 1px; height: 24px; background: var(--color-divider); margin: 0 4px;';
-    toolbar.appendChild(div1);
-
-    // Ручка / ластик
-    const tools = [
-      { tool: 'pen', svg: '<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>', label: 'Ручка' },
-      { tool: 'eraser', svg: '<path d="M20 20H7L3 16a2 2 0 0 1 0-3L14 2a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3L11 21"/>', label: 'Ластик' }
-    ];
-    tools.forEach((t) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.title = t.label;
-      btn.dataset.tool = t.tool;
-      btn.style.cssText = 'width: 32px; height: 32px; border: none; border-radius: 50%; background: ' + (t.tool === 'pen' ? 'var(--color-accent)' : 'transparent') + '; color: ' + (t.tool === 'pen' ? '#fff' : 'var(--color-text-primary)') + '; cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + t.svg + '</svg>';
-      btn.addEventListener('click', () => {
-        toolbar.querySelectorAll('button[data-tool]').forEach((b) => { b.style.background = 'transparent'; b.style.color = 'var(--color-text-primary)'; });
-        btn.style.background = 'var(--color-accent)';
-        btn.style.color = '#fff';
-        if (this.drawing) this.drawing.setTool(t.tool);
-      });
-      toolbar.appendChild(btn);
-    });
-
-    // Разделитель
-    const div2 = document.createElement('div');
-    div2.style.cssText = 'width: 1px; height: 24px; background: var(--color-divider); margin: 0 4px;';
-    toolbar.appendChild(div2);
-
-    // Размеры
-    [2, 4, 8, 16].forEach((s, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.dataset.size = s;
-      btn.style.cssText = 'width: 28px; height: 28px; border: 2px solid ' + (i === 1 ? 'var(--color-accent)' : 'transparent') + '; border-radius: 50%; background: var(--color-bg-hover); cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
-      btn.innerHTML = '<span style="width: ' + (s + 2) + 'px; height: ' + (s + 2) + 'px; background: var(--color-text-primary); border-radius: 50%;"></span>';
-      btn.addEventListener('click', () => {
-        toolbar.querySelectorAll('button[data-size]').forEach((b) => { b.style.borderColor = 'transparent'; });
-        btn.style.borderColor = 'var(--color-accent)';
-        if (this.drawing) this.drawing.setSize(s);
-      });
-      toolbar.appendChild(btn);
-    });
-
-    // Разделитель
-    const div3 = document.createElement('div');
-    div3.style.cssText = 'width: 1px; height: 24px; background: var(--color-divider); margin: 0 4px;';
-    toolbar.appendChild(div3);
-
-    // Эмодзи
-    const emojiBtn = document.createElement('button');
-    emojiBtn.type = 'button';
-    emojiBtn.title = 'Поставить эмодзи';
-    emojiBtn.style.cssText = 'width: 32px; height: 32px; border: none; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; padding: 0; flex-shrink: 0;';
-    emojiBtn.textContent = '😀';
-    emojiBtn.addEventListener('click', () => {
-      if (!this.drawing) return;
-      this.drawing.setTool('emoji');
-      this.emoji.open(emojiBtn, (emoji) => {
-        this.drawing._pendingEmoji = emoji;
-        toast.info('Кликните на фон, чтобы поставить ' + emoji);
-      });
-    });
-    toolbar.appendChild(emojiBtn);
-
-    // Разделитель
-    const div4 = document.createElement('div');
-    div4.style.cssText = 'width: 1px; height: 24px; background: var(--color-divider); margin: 0 4px;';
-    toolbar.appendChild(div4);
-
-    // Очистить
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.title = 'Очистить всё';
-    clearBtn.style.cssText = 'width: 32px; height: 32px; border: none; border-radius: 50%; background: transparent; color: var(--color-danger); cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
-    clearBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-    clearBtn.addEventListener('click', async () => {
-      const { confirmDialog } = await import('./ui/Modal.js');
-      const ok = await confirmDialog({ title: 'Очистить рисунки?', message: 'Все рисунки этого чата будут удалены.', danger: true, confirmText: 'Очистить' });
-      if (ok && this.drawing) {
-        this.drawing.clear();
-        this._updateDrawingCounter();
-      }
-    });
-    toolbar.appendChild(clearBtn);
-
-    // Закрыть
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.title = 'Закрыть';
-    closeBtn.style.cssText = 'width: 32px; height: 32px; border: none; border-radius: 50%; background: transparent; color: var(--color-text-secondary); cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;';
-    closeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-    closeBtn.addEventListener('click', () => this._closeDrawingUI());
-    toolbar.appendChild(closeBtn);
-
-    conv.appendChild(toolbar);
-
-    // Счётчик
-    const counter = document.createElement('div');
-    counter.className = 'drawing-counter';
-    counter.style.cssText = 'position: absolute; top: 70px; left: 16px; padding: 6px 12px; background: var(--color-bg-elevated); color: var(--color-text-secondary); border-radius: 999px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 60;';
-    counter.textContent = '🎨 ' + (this.drawing?.strokes?.length || 0) + ' шт.';
-    conv.appendChild(counter);
-  },
 
 
-  _updateDrawingCounter() {
-    const counter = document.querySelector('.drawing-counter');
-    if (counter && this.drawing) {
-      counter.textContent = '🎨 ' + this.drawing.strokes.length + ' шт.';
-    }
-  },
 
-  _closeDrawingUI() {
-    console.log('[Drawing Toolbar] Закрываю');
-    document.body.classList.remove('drawing-active');
-    document.querySelector('.drawing-toolbar')?.remove();
-    document.querySelector('.drawing-counter')?.remove();
-    if (this.drawing) {
-      this.drawing.disable();
-      this.drawing.slideUp();
-    }
-    if (this.drawingBtn) {
-      this.drawingBtn.style.color = '';
-    }
-  },
 
   async _showProfile() {
     const { modal, confirmDialog } = await import('./ui/Modal.js');

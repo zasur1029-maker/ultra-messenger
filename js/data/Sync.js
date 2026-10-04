@@ -24,12 +24,7 @@ export const Sync = {
       ws.onopen = () => {
         connected = true;
         console.log('[Sync] ✅ Подключён');
-        // Отправляем очередь
-        while (pendingQueue.length) {
-          const item = pendingQueue.shift();
-          try { ws.send(JSON.stringify(item)); } catch (e) {}
-        }
-        // Отправляем статус «онлайн»
+                // Отправляем статус «онлайн»
         if (store.state.user) {
           this.send({ type: 'online', username: store.state.user.username, online: true });
         }
@@ -103,31 +98,6 @@ export const Sync = {
           // не рендерим весь список при refresh
         } catch (e) {}
         break;
-
-      case 'drawings:clear-all': {
-        if (window.__DRAWING__) {
-          window.__DRAWING__.strokes = [];
-          window.__DRAWING__._redrawAll();
-        }
-        localStorage.removeItem('um_drawings');
-        console.log('[Sync] 🗑 Все рисунки очищены');
-        break;
-      }
-
-      case 'drawings:update': {
-        const { chatId, strokes } = msg;
-        const drawing = window.__DRAWING__;
-        if (!drawing) break;
-        // Применяем ТОЛЬКО если чат активен
-        if (drawing.chatId !== chatId) break;
-        // Не перерисовываем если я сам только что нарисовал
-        if (drawing.active) break;
-        
-        drawing.strokes = strokes || [];
-        drawing._redrawAll();
-        console.log('[Sync] 🎨 Рисунки обновлены с сервера');
-        break;
-      }
 
       case 'messages:update': {
         const m = msg.message;
