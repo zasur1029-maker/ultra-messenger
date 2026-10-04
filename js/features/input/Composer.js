@@ -50,7 +50,7 @@ export class Composer {
     });
 
     // Attach
-    this.attachBtn.addEventListener('click', () => this.fileInput.click());
+    this.attachBtn.addEventListener('click', (e) => { e.stopPropagation(); this._showAttachMenu(); });
     this.fileInput.addEventListener('change', (e) => this._handleFiles(e.target.files));
 
     // Drag & drop
