@@ -1498,3 +1498,71 @@
 [data-theme="amoled"] .composer {
   background: #0a0a0a !important;
 }
+
+/* ============================================================
+   🔥 УБИРАЮ ПАТТЕРН ИЗ COMPOSER
+   ============================================================ */
+
+.composer {
+  background: #212121 !important;
+  background-image: none !important;
+  position: relative !important;
+  z-index: 100 !important;
+}
+
+.composer * {
+  background-image: none !important;
+}
+
+.composer__input {
+  background: #2c2c2c !important;
+  background-image: none !important;
+}
+
+/* Также убираем паттерн из шапки чата */
+.conv-header {
+  background: #212121 !important;
+  background-image: none !important;
+  position: relative !important;
+  z-index: 100 !important;
+}
+
+.conv-header * {
+  background-image: none !important;
+}
+
+/* Паттерн ТОЛЬКО в .messages — и он не должен залезать под composer */
+.messages {
+  padding-bottom: 20px !important;
+  margin-bottom: 0 !important;
+}
+
+/* Фикс: паттерн ограничиваем только видимой областью сообщений */
+.messages::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 420px 863px !important;
+  background-position: center !important;
+  opacity: 0.12 !important;
+  filter: invert(60%) sepia(50%) saturate(900%) hue-rotate(230deg) brightness(110%) blur(0.5px) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Тёмная занавеска между сообщениями и composer — чтобы паттерн резко обрывался */
+.composer::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -8px !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 8px !important;
+  background: #212121 !important;
+  z-index: 1 !important;
+}
