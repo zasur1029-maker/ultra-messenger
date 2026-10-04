@@ -1,11 +1,14 @@
 /**
- * Composer — поле ввода с меню прикрепления.
+ * Поле ввода: auto-grow, отправка, reply/edit preview,
+ * вложения, голосовая запись.
  */
-import { el, debounce, formatDuration, formatBytes } from '../../core/Utils.js';
+import { el, debounce, formatDuration, uid } from '../../core/Utils.js';
 import { icon } from '../../core/Icon.js';
 import { store } from '../../core/Store.js';
 import { bus } from '../../core/EventBus.js';
+import { createMessage } from '../../data/Models.js';
 import { toast } from '../../ui/Toast.js';
+import { modal } from '../../ui/Modal.js';
 
 export class Composer {
   constructor() {
@@ -17,18 +20,19 @@ export class Composer {
     this.fileInput = document.getElementById('fileInput');
     this.replyPreview = document.getElementById('replyPreview');
     this.sendBtn = document.getElementById('sendBtn');
-    this._voiceRecorder = null;
-    this._voiceUI = null;
+
     this._bind();
   }
 
   _bind() {
+    // Auto-grow
     const autoGrow = () => {
       this.input.style.height = 'auto';
       this.input.style.height = Math.min(this.input.scrollHeight, 140) + 'px';
     };
     this.input.addEventListener('input', autoGrow);
 
+    // Enter / Shift+Enter
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -36,173 +40,60 @@ export class Composer {
       }
     });
 
+    // Submit
     this.form.addEventListener('submit', (e) => { e.preventDefault(); this.send(); });
 
+    // Emoji
     this.emojiBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       bus.emit('ui:toggleEmoji', this.emojiBtn);
     });
 
-    // МЕНЮ ПРИКРЕПЛЕНИЯ
-    this.attachBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this._showAttachMenu();
-    });
-
+    // Attach
+    this.attachBtn.addEventListener('click', () => this.fileInput.click());
     this.fileInput.addEventListener('change', (e) => this._handleFiles(e.target.files));
 
     // Drag & drop
     const conv = document.querySelector('.conversation');
-    if (conv) {
-      conv.addEventListener('dragover', (e) => { e.preventDefault(); conv.style.outline = '2px dashed var(--color-accent)'; });
-      conv.addEventListener('dragleave', () => { conv.style.outline = ''; });
-      conv.addEventListener('drop', (e) => {
-        e.preventDefault();
-        conv.style.outline = '';
-        if (e.dataTransfer.files.length) this._handleFiles(e.dataTransfer.files);
-      });
-    }
+    conv.addEventListener('dragover', (e) => { e.preventDefault(); conv.style.outline = '2px dashed var(--color-accent)'; });
+    conv.addEventListener('dragleave', () => { conv.style.outline = ''; });
+    conv.addEventListener('drop', (e) => {
+      e.preventDefault();
+      conv.style.outline = '';
+      if (e.dataTransfer.files.length) this._handleFiles(e.dataTransfer.files);
+    });
 
+    // Voice
     this.voiceBtn.addEventListener('click', () => this._startVoiceRecording());
 
+    // Reply / Edit
     bus.on('ui:replyChanged', (msg) => this._renderReplyPreview(msg));
     bus.on('ui:editChanged', (msg) => this._renderEditPreview(msg));
 
+    // Отслеживание печати
     const onTyping = debounce(() => {
       bus.emit('user:stoppedTyping');
       const chatId = store.state.activeChatId;
       if (chatId) {
         import('../../data/Sync.js').then(({ Sync }) => {
-          if (store.state.user?.username) Sync.setTyping(store.state.user.username, chatId, false);
-        }).catch(() => {});
+          if (store.state.user?.username) {
+            Sync.setTyping(store.state.user.username, chatId, false);
+          }
+        });
       }
     }, 1500);
-
     this.input.addEventListener('input', () => {
       bus.emit('user:typing');
       const chatId = store.state.activeChatId;
       if (chatId) {
         import('../../data/Sync.js').then(({ Sync }) => {
-          if (store.state.user?.username) Sync.setTyping(store.state.user.username, chatId, true);
-        }).catch(() => {});
+          if (store.state.user?.username) {
+            Sync.setTyping(store.state.user.username, chatId, true);
+          }
+        });
       }
       onTyping();
     });
-  }
-
-  _showAttachMenu() {
-    console.log('[Composer] Меню прикрепления');
-    document.querySelector('.attach-menu')?.remove();
-
-    const menu = document.createElement('div');
-    menu.className = 'attach-menu';
-    menu.style.position = 'fixed';
-    menu.style.background = '#2b2b2b';
-    menu.style.borderRadius = '12px';
-    menu.style.boxShadow = '0 8px 32px rgba(0,0,0,0.5)';
-    menu.style.padding = '6px';
-    menu.style.minWidth = '220px';
-    menu.style.zIndex = '999999';
-    menu.style.border = '1px solid #2f2f2f';
-
-    const items = [
-      { icon: 'image', label: 'Фото или видео', accept: 'image/*,video/*' },
-      { icon: 'file', label: 'Документ', accept: '.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx' },
-      { icon: 'voice', label: 'Аудио', accept: 'audio/*' },
-      { divider: true },
-      { icon: 'poll', label: 'Опрос', disabled: true },
-      { icon: 'check', label: 'Чек-лист', disabled: true }
-    ];
-
-    const icons = {
-      image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
-      file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
-      voice: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>',
-      poll: '<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>',
-      check: '<path d="M20 6 9 17l-5-5"/>'
-    };
-
-    items.forEach((item) => {
-      if (item.divider) {
-        const d = document.createElement('div');
-        d.style.height = '1px';
-        d.style.background = '#2f2f2f';
-        d.style.margin = '4px 6px';
-        menu.appendChild(d);
-        return;
-      }
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.style.display = 'flex';
-      btn.style.alignItems = 'center';
-      btn.style.gap = '12px';
-      btn.style.width = '100%';
-      btn.style.padding = '10px 12px';
-      btn.style.border = 'none';
-      btn.style.background = 'transparent';
-      btn.style.borderRadius = '8px';
-      btn.style.fontSize = '14px';
-      btn.style.fontFamily = 'inherit';
-      btn.style.textAlign = 'left';
-      btn.style.cursor = item.disabled ? 'not-allowed' : 'pointer';
-      btn.style.color = item.disabled ? '#707579' : '#ffffff';
-
-      if (!item.disabled) {
-        btn.addEventListener('mouseenter', () => btn.style.background = '#3a3a3a');
-        btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
-      }
-
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('width', '20');
-      svg.setAttribute('height', '20');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('fill', 'none');
-      svg.setAttribute('stroke', 'currentColor');
-      svg.setAttribute('stroke-width', '2');
-      svg.setAttribute('stroke-linecap', 'round');
-      svg.setAttribute('stroke-linejoin', 'round');
-      svg.innerHTML = icons[item.icon] || '';
-      btn.appendChild(svg);
-
-      const label = document.createElement('span');
-      label.textContent = item.label;
-      btn.appendChild(label);
-
-      if (!item.disabled) {
-        btn.addEventListener('click', () => {
-          menu.remove();
-          this.fileInput.accept = item.accept || '*/*';
-          this.fileInput.click();
-        });
-      }
-
-      menu.appendChild(btn);
-    });
-
-    document.body.appendChild(menu);
-
-    const rect = this.attachBtn.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    menu.style.left = Math.max(8, rect.left) + 'px';
-    menu.style.top = Math.max(8, rect.top - menuRect.height - 8) + 'px';
-
-    const closeOnOutside = (ev) => {
-      if (!menu.contains(ev.target) && ev.target !== this.attachBtn) {
-        menu.remove();
-        document.removeEventListener('click', closeOnOutside);
-      }
-    };
-    const closeOnEsc = (ev) => {
-      if (ev.key === 'Escape') {
-        menu.remove();
-        document.removeEventListener('keydown', closeOnEsc);
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener('click', closeOnOutside);
-      document.addEventListener('keydown', closeOnEsc);
-    }, 10);
   }
 
   focus() { this.input.focus(); }
@@ -231,6 +122,8 @@ export class Composer {
       createdAt: Date.now()
     };
 
+    console.log('[Composer] Отправляю:', msg);
+
     if (!store.state.messages[chatId]) store.state.messages[chatId] = [];
     store.state.messages[chatId].push(msg);
 
@@ -245,22 +138,28 @@ export class Composer {
     this._clearReply();
     this.focus();
 
+    // === СТАТУСЫ ===
+    // sending → sent (0.5 сек)
     setTimeout(() => {
       if (msg.status === 'sending') {
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
+        console.log('[Composer] → sent');
         import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
       }
     }, 500);
 
+    // sent → delivered (1.5 сек)
     setTimeout(() => {
       if (msg.status === 'sent') {
         msg.status = 'delivered';
         bus.emit('messages:update', { chatId, message: msg });
+        console.log('[Composer] → delivered');
         import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
       }
     }, 1500);
 
+    // Отправка через WebSocket сразу
     import('../../data/Sync.js').then(({ Sync }) => {
       Sync.sendMessage(msg);
       if (chat) Sync.sendChat(chat);
@@ -289,8 +188,10 @@ export class Composer {
     const MAX_SIZE = 100 * 1024 * 1024;
 
     for (const file of Array.from(files).slice(0, 10)) {
+      // Проверка размера
       if (file.size > MAX_SIZE) {
-        toast.error('Файл слишком большой: ' + (file.size / 1024 / 1024).toFixed(1) + ' МБ');
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        toast.error(`Файл слишком большой: ${sizeMB} МБ (макс. 100 МБ)`);
         continue;
       }
 
@@ -298,6 +199,7 @@ export class Composer {
       const isVideo = file.type.startsWith('video/');
       const me = store.state.user;
 
+      // Создаём сообщение с прогрессом
       const msg = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         chatId,
@@ -320,10 +222,12 @@ export class Composer {
         createdAt: Date.now()
       };
 
+      // Показываем сразу
       const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
       list.push(msg);
       bus.emit('messages:append', { chatId, message: msg });
 
+      // Превью для видео
       if (isVideo) {
         try {
           const meta = await getVideoMetadata(file);
@@ -332,9 +236,10 @@ export class Composer {
           msg.attachments[0].width = meta.width;
           msg.attachments[0].height = meta.height;
           bus.emit('messages:update', { chatId, message: msg });
-        } catch (e) {}
+        } catch (e) { console.warn(e); }
       }
 
+      // Превью для картинок
       if (isImage) {
         try {
           const preview = await fileToDataUrl(file);
@@ -344,16 +249,20 @@ export class Composer {
         } catch (e) {}
       }
 
+      // === ЗАГРУЗКА НА СЕРВЕР ===
       try {
         const uploaded = await uploadFileWithProgress(file, (progress) => {
           msg.attachments[0].progress = progress;
           bus.emit('messages:update', { chatId, message: msg });
         });
 
+        console.log('[Composer] Загружено:', uploaded);
+
         msg.attachments[0].url = uploaded.url;
         msg.attachments[0].uploading = false;
         msg.attachments[0].progress = 100;
 
+        // Сохраняем в БД
         await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -363,14 +272,17 @@ export class Composer {
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
 
-        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
+        // Уведомление другим
+        import('../../data/Sync.js').then(({ Sync }) => {
+          Sync.sendMessage({ ...msg, attachments: msg.attachments });
+        });
 
         setTimeout(() => {
           msg.status = 'delivered';
           bus.emit('messages:update', { chatId, message: msg });
         }, 500);
       } catch (err) {
-        console.error('[Composer]', err);
+        console.error('[Composer] Ошибка:', err);
         toast.error('Ошибка загрузки: ' + err.message);
         msg.attachments[0].uploading = false;
         msg.attachments[0].error = true;
@@ -380,119 +292,295 @@ export class Composer {
     this.fileInput.value = '';
   }
 
+  /**
+   * Загрузка файла с прогрессом (XMLHttpRequest).
+   */
+  _uploadFileWithProgress(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error('Upload failed: ' + xhr.status));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+
+      const fd = new FormData();
+      fd.append('file', file);
+      xhr.send(fd);
+    });
+  }
+
+  /**
+   * Извлекает метаданные и превью из видео.
+   */
+  async _getVideoMetadata(file) {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        
+        // Делаем превью — 1-я секунда
+        video.currentTime = Math.min(1, duration / 2);
+        
+        video.onseeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const maxW = 400;
+            const ratio = Math.min(1, maxW / width);
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+            
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail });
+          } catch (e) {
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail: null });
+          }
+        };
+        
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve({ duration, width, height, thumbnail: null });
+        };
+        
+        // Таймаут на seek
+        setTimeout(() => {
+          if (video.readyState < 2) {
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail: null });
+          }
+        }, 3000);
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Не удалось прочитать видео'));
+      };
+    });
+  }
+
   async _startVoiceRecording() {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error('Микрофон недоступен');
-      return;
-    }
-    if (this._voiceRecorder) {
+    // Импортируем класс
+    const { VoiceRecorder } = await import('./VoiceRecorder.js');
+
+    // Если уже записываем — остановить и отправить
+    if (this._voiceRecorder && this._voiceRecorder.isRecording) {
       await this._stopVoiceRecording(true);
       return;
     }
 
-    let recorder, stream;
+    let recorder;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recorder = new MediaRecorder(stream);
-    } catch (e) {
-      toast.error('Микрофон запрещён');
+      recorder = new VoiceRecorder();
+      await recorder.start();
+    } catch (err) {
+      console.error('[Composer] Ошибка старта записи:', err);
+      toast.error('Не удалось получить доступ к микрофону');
       return;
     }
 
     this._voiceRecorder = recorder;
-    this._voiceStream = stream;
-    this._voiceChunks = [];
-    this._voiceStart = Date.now();
+    this._voiceStartTime = Date.now();
     this._voiceCancelled = false;
 
-    recorder.addEventListener('dataavailable', (e) => {
-      if (e.data.size) this._voiceChunks.push(e.data);
-    });
+    console.log('[Composer] Запись началась');
 
-    recorder.start();
+    // Меняем UI — показываем индикатор записи
     this.voiceBtn.classList.add('is-recording');
-    this.voiceBtn.style.color = 'var(--color-danger)';
+    this.voiceBtn.setAttribute('aria-label', 'Отправить голосовое');
+    this.voiceBtn.title = 'Отправить голосовое';
+    this.voiceBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
-    const timer = document.createElement('span');
-    timer.style.cssText = 'font-size:13px;color:var(--color-danger);align-self:center;padding:0 8px;font-variant-numeric:tabular-nums;';
-    timer.textContent = '0:00';
-    this.form.insertBefore(timer, this.input);
+    // Скрываем поле ввода и кнопку отправки
     this.input.style.display = 'none';
     this.sendBtn.style.display = 'none';
 
+    // Создаём плашку записи
+    const recordingUI = document.createElement('div');
+    recordingUI.className = 'voice-recording-ui';
+    recordingUI.style.cssText = 'display: flex; align-items: center; gap: 12px; flex: 1; padding: 8px 12px; background: var(--color-bg-hover); border-radius: 20px;';
+
+    const redDot = document.createElement('span');
+    redDot.style.cssText = 'width: 10px; height: 10px; border-radius: 50%; background: var(--color-danger, #e53935); animation: pulse 1s infinite;';
+    recordingUI.appendChild(redDot);
+
+    const timer = document.createElement('span');
+    timer.style.cssText = 'font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--color-danger); min-width: 45px;';
+    timer.textContent = '0:00';
+    recordingUI.appendChild(timer);
+
+    const hint = document.createElement('span');
+    hint.style.cssText = 'flex: 1; font-size: 13px; color: var(--color-text-secondary);';
+    hint.textContent = 'Идёт запись… Нажмите ⬛ чтобы отправить';
+    recordingUI.appendChild(hint);
+
+    // Кнопка отмены
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'icon-btn';
+    cancelBtn.title = 'Отменить';
+    cancelBtn.setAttribute('aria-label', 'Отменить запись');
+    cancelBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    cancelBtn.style.cssText = 'width: 36px; height: 36px; color: var(--color-danger);';
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._cancelVoiceRecording();
+    });
+    recordingUI.appendChild(cancelBtn);
+
+    // Вставляем в форму перед voiceBtn
+    this.form.insertBefore(recordingUI, this.voiceBtn);
+    this._voiceUI = recordingUI;
+
+    // Таймер обновления
     this._voiceTimerInterval = setInterval(() => {
-      timer.textContent = formatDuration((Date.now() - this._voiceStart) / 1000);
+      const elapsed = (Date.now() - this._voiceStartTime) / 1000;
+      const mins = Math.floor(elapsed / 60);
+      const secs = Math.floor(elapsed % 60);
+      timer.textContent = mins + ':' + String(secs).padStart(2, '0');
     }, 200);
 
-    this._voiceTimerEl = timer;
+    // Автостоп через 5 минут
+    this._voiceAutoStopTimer = setTimeout(() => {
+      if (this._voiceRecorder && this._voiceRecorder.isRecording) {
+        console.log('[Composer] Автостоп через 5 минут');
+        this._stopVoiceRecording(true);
+      }
+    }, 5 * 60 * 1000);
   }
 
   async _stopVoiceRecording(send = true) {
     if (!this._voiceRecorder) return;
-    const recorder = this._voiceRecorder;
-    const stream = this._voiceStream;
-    const startTime = this._voiceStart;
 
+    console.log('[Composer] Останавливаю запись, send:', send);
+
+    // Очищаем таймеры
     clearInterval(this._voiceTimerInterval);
-    this._voiceTimerEl?.remove();
+    clearTimeout(this._voiceAutoStopTimer);
+
+    const recorder = this._voiceRecorder;
+    this._voiceRecorder = null;
+
+    let result = null;
+    try {
+      result = await recorder.stop();
+    } catch (err) {
+      console.error('[Composer] Ошибка остановки:', err);
+    }
+
+    // Восстанавливаем UI
+    this._resetVoiceUI();
+
+    if (!send || !result || !result.blob) {
+      console.log('[Composer] Запись отменена или пуста');
+      return;
+    }
+
+    // Отправляем голосовое
+    console.log('[Composer] Отправляю голосовое, размер:', result.blob.size);
+
+    const chatId = store.state.activeChatId;
+    if (!chatId) {
+      toast.error('Не выбран чат');
+      return;
+    }
+
+    // Генерируем волновую форму
+    const bars = 40;
+    const waveform = [];
+    for (let i = 0; i < bars; i++) {
+      waveform.push(0.3 + Math.random() * 0.7);
+    }
+
+    const msg = createMessage({
+      chatId,
+      authorId: store.state.user.id,
+      type: 'voice',
+      attachments: [{
+        kind: 'voice',
+        url: result.url,
+        blob: result.blob,
+        duration: result.duration,
+        durationFormatted: formatDuration(result.duration),
+        waveform,
+        mime: result.mime || 'audio/webm'
+      }],
+      status: 'sending'
+    });
+
+    const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
+    list.push(msg);
+
+    const chat = store.state.chats.find((c) => c.id === chatId);
+    if (chat) chat.updatedAt = Date.now();
+
+    bus.emit('messages:append', { chatId, message: msg });
+    bus.emit('message:sent', { chatId, message: msg });
+    bus.emit('chats:update');
+
+    toast.success('Голосовое отправлено');
+  }
+
+  _cancelVoiceRecording() {
+    console.log('[Composer] Отмена записи');
+    if (this._voiceRecorder) {
+      this._voiceRecorder.cancel();
+      this._voiceRecorder = null;
+    }
+    clearInterval(this._voiceTimerInterval);
+    clearTimeout(this._voiceAutoStopTimer);
+    this._resetVoiceUI();
+    toast.info('Запись отменена');
+  }
+
+  _resetVoiceUI() {
+    this.voiceBtn.classList.remove('is-recording');
+    this.voiceBtn.setAttribute('aria-label', 'Голосовое');
+    this.voiceBtn.title = 'Голосовое сообщение';
+    this.voiceBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>';
+
+    if (this._voiceUI) {
+      this._voiceUI.remove();
+      this._voiceUI = null;
+    }
+
     this.input.style.display = '';
     this.sendBtn.style.display = '';
-    this.voiceBtn.classList.remove('is-recording');
-    this.voiceBtn.style.color = '';
-
-    return new Promise((resolve) => {
-      recorder.addEventListener('stop', async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(this._voiceChunks, { type: 'audio/webm' });
-        this._voiceRecorder = null;
-        this._voiceStream = null;
-        this._voiceChunks = [];
-
-        if (!send || blob.size < 200) { resolve(); return; }
-
-        const duration = (Date.now() - startTime) / 1000;
-        const chatId = store.state.activeChatId;
-        if (!chatId) { resolve(); return; }
-
-        const waveform = Array.from({ length: 40 }, () => 0.3 + Math.random() * 0.7);
-        const me = store.state.user;
-
-        const msg = {
-          id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-          chatId,
-          authorId: me.username || me.id,
-          authorName: me.name,
-          type: 'voice',
-          text: '',
-          attachments: [{
-            kind: 'voice',
-            blob,
-            url: URL.createObjectURL(blob),
-            duration,
-            durationFormatted: formatDuration(duration),
-            waveform,
-            mime: 'audio/webm'
-          }],
-          reactions: {},
-          status: 'sending',
-          createdAt: Date.now()
-        };
-
-        const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
-        list.push(msg);
-        bus.emit('messages:append', { chatId, message: msg });
-        bus.emit('message:sent', { chatId, message: msg });
-        resolve();
-      }, { once: true });
-
-      recorder.stop();
-    });
   }
 
   _renderReplyPreview(msg) {
     const chat = store.state.chats.find((c) => c.id === msg.chatId);
-    const author = msg.authorId === store.state.user.id ? store.state.user
-      : (chat?.participants?.find((p) => p.id === msg.authorId) || { name: 'Пользователь' });
+    const author = msg.authorId === store.state.user.id ? store.state.user : (chat?.participants?.find((p) => p.id === msg.authorId) || { name: 'Пользователь' });
     this.replyPreview.hidden = false;
     this.replyPreview.replaceChildren(
       el('div', { class: 'reply-preview__body' },
@@ -531,6 +619,17 @@ export class Composer {
   }
 }
 
+function getImageDimensions(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+/**
+ * Конвертирует файл в dataURL — сохраняется навсегда.
+ */
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -540,27 +639,14 @@ function fileToDataUrl(file) {
   });
 }
 
-function uploadFileWithProgress(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch (e) { reject(new Error('Invalid JSON')); }
-      } else {
-        reject(new Error('HTTP ' + xhr.status));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Сеть'));
-    const fd = new FormData();
-    fd.append('file', file);
-    xhr.send(fd);
-  });
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Б';
+  const k = 1024;
+  const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
 }
+
 
 async function getVideoMetadata(file) {
   return new Promise((resolve, reject) => {
@@ -568,13 +654,17 @@ async function getVideoMetadata(file) {
     video.preload = 'metadata';
     video.muted = true;
     video.playsInline = true;
+    
     const url = URL.createObjectURL(file);
     video.src = url;
+    
     video.onloadedmetadata = () => {
       const duration = video.duration;
       const width = video.videoWidth;
       const height = video.videoHeight;
+      
       video.currentTime = Math.min(1, duration / 2);
+      
       video.onseeked = () => {
         try {
           const canvas = document.createElement('canvas');
@@ -582,8 +672,10 @@ async function getVideoMetadata(file) {
           const ratio = Math.min(1, maxW / width);
           canvas.width = width * ratio;
           canvas.height = height * ratio;
-          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+          
           URL.revokeObjectURL(url);
           resolve({ duration, width, height, thumbnail });
         } catch (e) {
@@ -591,7 +683,47 @@ async function getVideoMetadata(file) {
           resolve({ duration, width, height, thumbnail: null });
         }
       };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ duration, width, height, thumbnail: null });
+      };
     };
-    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Video error')); };
+    
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Не удалось прочитать видео'));
+    };
+  });
+}
+
+/**
+ * Загружает файл с прогрессом через XHR.
+ */
+function uploadFileWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch (e) { reject(new Error('Invalid JSON')); }
+      } else {
+        reject(new Error('Upload failed: ' + xhr.status));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+
+    const fd = new FormData();
+    fd.append('file', file);
+    xhr.send(fd);
   });
 }
