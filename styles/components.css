@@ -1490,3 +1490,90 @@
 [data-theme="amoled"] .composer {
   background: #0a0a0a !important;
 }
+
+/* ============================================================
+   🔥 УБИРАЕМ ФОН У .conversation И .messages
+   Чтобы паттерн был виден
+   ============================================================ */
+
+/* Паттерн на самом .conversation */
+.conversation {
+  background-color: #0f0f0f !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 320px 658px !important;
+  background-position: center !important;
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+/* Тёмная плёнка поверх паттерна, но под сообщениями */
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(15, 15, 15, 0.88) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* .messages — ПРОЗРАЧНЫЙ, чтобы был виден паттерн */
+.messages {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* Убираем ::before с .messages — он не нужен */
+.messages::before {
+  display: none !important;
+}
+
+/* Шапка и composer — плотный фон БЕЗ паттерна */
+.conv-header {
+  background: #212121 !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+.composer {
+  background: #212121 !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Все сообщения — поверх всего */
+.messages > * {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* Светлая тема */
+[data-theme="light"] .conversation {
+  background-color: #d4dbe2 !important;
+}
+
+[data-theme="light"] .conversation::before {
+  background: rgba(240, 244, 248, 0.85) !important;
+}
+
+[data-theme="light"] .conv-header,
+[data-theme="light"] .composer {
+  background: #ffffff !important;
+}
+
+/* AMOLED */
+[data-theme="amoled"] .conversation {
+  background-color: #000000 !important;
+}
+
+[data-theme="amoled"] .conversation::before {
+  background: rgba(0, 0, 0, 0.92) !important;
+}
+
+[data-theme="amoled"] .conv-header,
+[data-theme="amoled"] .composer {
+  background: #0a0a0a !important;
+}
