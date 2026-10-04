@@ -840,3 +840,317 @@
   background: #212121 !important;
   border-bottom: 1px solid #2f2f2f !important;
 }
+
+/* ============================================================
+   🔥 ФИНАЛЬНЫЙ ФИКС — точная копия TG Web K
+   ============================================================ */
+
+/* Отступы между сообщениями — как в TG */
+.messages {
+  padding: 12px 16px 16px !important;
+  gap: 4px !important;
+}
+
+.msg {
+  margin-top: 4px !important;
+}
+.msg--grouped {
+  margin-top: 1px !important;
+}
+
+/* Пузыри — с большими скруглениями */
+.bubble {
+  padding: 8px 12px 7px 12px !important;
+  border-radius: 18px !important;
+  position: relative !important;
+  min-width: 80px !important;
+}
+
+/* Хвостик входящего — БОЛЬШОЙ, явный */
+.bubble--tail-in {
+  border-bottom-left-radius: 4px !important;
+}
+
+.bubble--tail-in::before {
+  content: '' !important;
+  position: absolute !important;
+  left: -8px !important;
+  bottom: 0 !important;
+  width: 14px !important;
+  height: 20px !important;
+  background: #212121 !important;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%) !important;
+  border-bottom-left-radius: 3px !important;
+  z-index: -1 !important;
+}
+
+.bubble--tail-in::after {
+  display: none !important;
+}
+
+/* Хвостик исходящего — БОЛЬШОЙ, явный */
+.msg--out .bubble--tail-out {
+  border-bottom-right-radius: 4px !important;
+}
+
+.msg--out .bubble--tail-out::before {
+  content: '' !important;
+  position: absolute !important;
+  right: -8px !important;
+  bottom: 0 !important;
+  width: 14px !important;
+  height: 20px !important;
+  background: #766ac8 !important;
+  clip-path: polygon(0 0, 100% 100%, 0 100%) !important;
+  border-bottom-right-radius: 3px !important;
+  z-index: -1 !important;
+}
+
+.msg--out .bubble--tail-out::after {
+  display: none !important;
+}
+
+/* Мета внутри пузыря — время справа внизу */
+.bubble__meta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  float: right !important;
+  margin: 6px 0 -3px 10px !important;
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  line-height: 1 !important;
+  vertical-align: bottom !important;
+}
+
+.msg--out .bubble__meta {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.bubble__meta svg {
+  width: 16px !important;
+  height: 16px !important;
+  vertical-align: middle !important;
+}
+
+/* Текст сообщения */
+.bubble__text {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  color: #ffffff !important;
+  padding-right: 0 !important;
+}
+
+/* ============================================================
+   ФОН ЧАТА — узор как в TG
+   ============================================================ */
+.conversation {
+  background-color: #0f0f0f !important;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(135, 116, 225, 0.08) 0, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(135, 116, 225, 0.06) 0, transparent 50%) !important;
+  background-size: 100% 100% !important;
+  position: relative !important;
+}
+
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='rgba(135,116,225,0.06)' stroke-width='1'%3E%3Ccircle cx='30' cy='30' r='8'/%3E%3Ccircle cx='170' cy='60' r='10'/%3E%3Ccircle cx='100' cy='120' r='6'/%3E%3Ccircle cx='50' cy='170' r='9'/%3E%3Ccircle cx='150' cy='150' r='7'/%3E%3Cpath d='M 20 90 L 40 80 L 30 70 Z'/%3E%3Cpath d='M 160 100 L 180 110 L 170 130 Z'/%3E%3Crect x='80' y='40' width='20' height='20' rx='4'/%3E%3Crect x='120' y='170' width='16' height='16' rx='3'/%3E%3C/g%3E%3C/svg%3E") !important;
+  opacity: 0.5 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+.messages {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* ============================================================
+   COMPOSER — как в TG (фиолетовый круглый)
+   ============================================================ */
+.composer {
+  background: #212121 !important;
+  border-top: 1px solid #2f2f2f !important;
+  padding: 8px 12px !important;
+  gap: 8px !important;
+}
+
+.composer__input {
+  background: #2c2c2c !important;
+  border-radius: 22px !important;
+  padding: 10px 18px !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  min-height: 44px !important;
+}
+
+.composer__input::placeholder {
+  color: #707579 !important;
+}
+
+.composer__input:focus {
+  background: #333 !important;
+  border-color: transparent !important;
+}
+
+/* Кнопки в composer — круглые, как в TG */
+.composer .icon-btn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #aaaaaa !important;
+}
+
+.composer .icon-btn:hover {
+  background: #2c2c2c !important;
+  color: #ffffff !important;
+}
+
+.composer .icon-btn--accent {
+  background: #8774e1 !important;
+  color: #ffffff !important;
+}
+
+.composer .icon-btn--accent:hover {
+  background: #766ac8 !important;
+}
+
+/* ============================================================
+   ШАПКА ЧАТА — тёмная, с круглыми кнопками
+   ============================================================ */
+.conv-header {
+  background: #212121 !important;
+  border-bottom: 1px solid #2f2f2f !important;
+  padding: 8px 12px !important;
+}
+
+.conv-header__name {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+
+.conv-header__status {
+  font-size: 13px !important;
+  color: #8774e1 !important;
+}
+
+.conv-header .icon-btn {
+  color: #aaaaaa !important;
+}
+
+.conv-header .icon-btn:hover {
+  background: #2c2c2c !important;
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   SIDEBAR — фильтры как в TG (фиолетовые pill)
+   ============================================================ */
+.filter {
+  padding: 6px 16px !important;
+  border-radius: 9999px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #aaaaaa !important;
+  background: transparent !important;
+}
+
+.filter:hover {
+  background: #2c2c2c !important;
+  color: #ffffff !important;
+}
+
+.filter.is-active {
+  background: #8774e1 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Активный чат в списке */
+.chat-item.is-active {
+  background: #8774e1 !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+}
+
+.chat-item.is-active .chat-item__name {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.chat-item.is-active .chat-item__preview,
+.chat-item.is-active .chat-item__time {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.chat-item.is-active .chat-item__unread {
+  background: #ffffff !important;
+  color: #8774e1 !important;
+}
+
+/* ============================================================
+   FAB — фиолетовая круглая кнопка
+   ============================================================ */
+.fab {
+  background: #8774e1 !important;
+  box-shadow: 0 4px 16px rgba(135, 116, 225, 0.5) !important;
+}
+
+.fab:hover {
+  background: #766ac8 !important;
+  transform: scale(1.05) !important;
+}
+
+/* ============================================================
+   АВАТАРЫ в списке чатов — БЕЗ теней, плоские
+   ============================================================ */
+.avatar {
+  box-shadow: none !important;
+}
+
+/* Онлайн-точка */
+.avatar__online {
+  background: #4dcd5e !important;
+  border: 2px solid #212121 !important;
+}
+
+/* День (Today) — фиолетовый pill */
+.day-divider span {
+  background: rgba(135, 116, 225, 0.25) !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 14px !important;
+  border-radius: 9999px !important;
+}
+
+/* Типинг — фиолетовый */
+.typing {
+  background: #212121 !important;
+  color: #aaaaaa !important;
+}
+
+.typing__dots i {
+  background: #8774e1 !important;
+}
+
+/* ============================================================
+   Скроллбар — тонкий, фиолетовый
+   ============================================================ */
+*::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(135, 116, 225, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(135, 116, 225, 0.5) !important;
+}
