@@ -143,8 +143,6 @@ const APP = {
   },
 
   _bindGlobal() {
-    }
-
     // === Остальные обработчики ===
     bus.on('ui:openChat', (chatId) => this._openChat(chatId));
 
