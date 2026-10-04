@@ -254,9 +254,9 @@ export class Composer {
         let uploaded;
         if (isImage) {
           const dataUrl = await fileToDataUrl(file);
-          const res = await fetch('/api/upload-base64', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("/api/upload-base64", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dataUrl, name: file.name })
           });
           uploaded = await res.json();
@@ -264,7 +264,8 @@ export class Composer {
           uploaded = await uploadFileWithProgress(file, (progress) => {
           msg.attachments[0].progress = progress;
           bus.emit('messages:update', { chatId, message: msg });
-        });
+          });
+        }
 
         console.log('[Composer] Загружено:', uploaded);
 
