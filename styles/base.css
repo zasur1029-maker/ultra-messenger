@@ -1,5 +1,5 @@
 /* =========================================================
-   RESET + БАЗОВЫЕ СТИЛИ
+   BASE v2 — Reset + Typography
    ========================================================= */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -38,6 +38,7 @@ button, input, textarea, select {
   background: none;
   border: none;
   outline: none;
+  font-family: inherit;
 }
 
 button { cursor: pointer; user-select: none; }
@@ -48,7 +49,6 @@ a:hover { text-decoration: underline; }
 
 ul, ol { list-style: none; }
 
-/* Focus visible — только клавиатура */
 :focus { outline: none; }
 :focus-visible {
   outline: 2px solid var(--color-accent);
@@ -56,7 +56,7 @@ ul, ol { list-style: none; }
   border-radius: var(--radius-sm);
 }
 
-/* Скроллбары */
+/* Скроллбары — тоньше и красивее */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-text-tertiary) transparent;
@@ -66,8 +66,8 @@ ul, ol { list-style: none; }
 *::-webkit-scrollbar-thumb {
   background: var(--color-text-tertiary);
   border-radius: var(--radius-full);
+  opacity: 0.5;
 }
-*::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
 
 /* Утилиты */
 .sr-only {
@@ -88,11 +88,9 @@ ul, ol { list-style: none; }
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }
 
-/* Selection */
 ::selection {
   background: var(--color-accent);
   color: var(--color-text-on-accent);
