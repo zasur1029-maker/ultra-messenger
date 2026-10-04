@@ -1965,3 +1965,63 @@
     backdrop-filter: none !important;
   }
 }
+
+/* ============================================================
+   📱 МОБИЛЬНЫЙ ФИКС — только ускорение, без слома UI
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Отключаем backdrop-filter (тормозит на iOS) */
+  .sidebar__header,
+  .filters,
+  .conv-header,
+  .composer {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #212121 !important;
+  }
+
+  /* Отключаем паттерн (тяжёлый) */
+  .conversation::before,
+  .sidebar::before,
+  .messages::before,
+  .app::before {
+    display: none !important;
+  }
+
+  .conversation,
+  .sidebar,
+  .messages {
+    background-image: none !important;
+  }
+
+  /* Тени убираем */
+  .bubble {
+    box-shadow: none !important;
+  }
+
+  /* Кнопки работают — НЕ трогаем их! */
+  .icon-btn,
+  .filter,
+  .chat-item,
+  .fab,
+  .composer__input,
+  button {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+
+  /* Плавный скролл на iOS */
+  .messages,
+  .chat-list {
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Скрываем «Назад» на десктопе */
+@media (min-width: 769px) {
+  #backBtn,
+  .icon-btn--mobile {
+    display: none !important;
+  }
+}
