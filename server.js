@@ -79,7 +79,7 @@ async function initDB() {
   }
 }
 
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({ limit: '150mb' }));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');

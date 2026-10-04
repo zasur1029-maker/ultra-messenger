@@ -185,19 +185,46 @@ export class Composer {
     const chatId = store.state.activeChatId;
     if (!chatId) return;
 
+    const MAX_SIZE = 100 * 1024 * 1024;  // 100 МБ
+
     for (const file of Array.from(files).slice(0, 10)) {
+      // ✅ ПРОВЕРКА РАЗМЕРА
+      if (file.size > MAX_SIZE) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        toast.error(`Файл слишком большой: ${sizeMB} МБ (макс. 100 МБ)`);
+        continue;
+      }
+
       const isImage = file.type.startsWith('image/');
-      let url, width = null, height = null;
+      const isVideo = file.type.startsWith('video/');
+      let url, width = null, height = null, duration = null, thumbnail = null;
 
       if (isImage) {
         try {
-          // Сжимаем картинку до 800px (меньше размер — быстрее синхронизация)
-          url = await compressImage(file, 800);
+          url = await compressImage(file, 1200);
           const dims = await getImageDimensions(url);
           width = dims.w;
           height = dims.h;
         } catch (err) {
           url = await fileToDataUrl(file);
+        }
+      } else if (isVideo) {
+        // ✅ ВИДЕО
+        try {
+          // Создаём превью видео (первый кадр)
+          const meta = await getVideoMetadata(file);
+          duration = meta.duration;
+          width = meta.width;
+          height = meta.height;
+          thumbnail = meta.thumbnail;
+          // Само видео — как blob URL (тяжёлое в base64)
+          url = URL.createObjectURL(file);
+          
+          console.log('[Composer] Видео:', meta.width + 'x' + meta.height, 
+                      'длительность:', meta.duration.toFixed(1) + 'с');
+        } catch (err) {
+          console.warn('[Composer] Не удалось обработать видео:', err);
+          url = URL.createObjectURL(file);
         }
       } else {
         url = await fileToDataUrl(file);
@@ -209,48 +236,63 @@ export class Composer {
         chatId,
         authorId: me.username || me.id,
         authorName: me.name,
-        type: isImage ? 'image' : 'file',
+        type: isImage ? 'image' : (isVideo ? 'video' : 'file'),
         text: '',
         attachments: [{
-          kind: isImage ? 'image' : 'file',
+          kind: isImage ? 'image' : (isVideo ? 'video' : 'file'),
           url,
           name: file.name,
           size: file.size,
           sizeFormatted: formatBytes(file.size),
           mime: file.type,
-          width, height
+          width, height, duration,
+          thumbnail,
+          isBlob: isVideo  // ← видео как blob URL
         }],
         reactions: {},
         status: 'sending',
         createdAt: Date.now()
       };
 
-      console.log('[Composer] Картинка размером:', (url.length / 1024).toFixed(1), 'KB');
+      console.log('[Composer] Отправляю:', msg.type, '-', (file.size / 1024).toFixed(1), 'KB');
 
-      // 1. Добавляем локально
+      // Локально
       const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
       list.push(msg);
       const chat = store.state.chats.find((c) => c.id === chatId);
       if (chat) chat.updatedAt = Date.now();
       bus.emit('messages:append', { chatId, message: msg });
 
-      // 2. ✅ ЧЕРЕЗ FETCH (не WebSocket) — поддерживает большие данные
+      // ✅ НА СЕРВЕР — через fetch (для больших файлов)
       try {
+        // Для видео — не отправляем весь blob, только метаданные + превью
+        let msgToSend = msg;
+        if (isVideo && msg.attachments[0].isBlob) {
+          // Видео — отправляем только превью и метаданные (blob не пройдёт через JSON)
+          msgToSend = {
+            ...msg,
+            attachments: [{
+              ...msg.attachments[0],
+              url: null,  // ← URL только локальный
+              thumbnail: msg.attachments[0].thumbnail
+            }]
+          };
+        }
+        
         const res = await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg)
+          body: JSON.stringify(msgToSend)
         });
         const data = await res.json();
-        console.log('[Composer] Картинка отправлена на сервер:', data);
+        console.log('[Composer] На сервер:', data);
 
-        // 3. Помечаем как sent
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
 
-        // 4. Broadcast через WebSocket чтобы другие получили
+        // Уведомление через WebSocket (без payload)
         import('../../data/Sync.js').then(({ Sync }) => {
-          Sync.sendMessage({ ...msg, attachments: [] });  // уведомление без payload
+          Sync.sendMessage({ ...msg, attachments: [], isMetaOnly: true });
         });
 
         setTimeout(() => {
@@ -258,12 +300,73 @@ export class Composer {
           bus.emit('messages:update', { chatId, message: msg });
         }, 500);
       } catch (err) {
-        console.error('[Composer] Ошибка отправки:', err);
+        console.error('[Composer] Ошибка:', err);
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
       }
     }
     this.fileInput.value = '';
+  }
+
+  /**
+   * Извлекает метаданные и превью из видео.
+   */
+  async _getVideoMetadata(file) {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        
+        // Делаем превью — 1-я секунда
+        video.currentTime = Math.min(1, duration / 2);
+        
+        video.onseeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const maxW = 400;
+            const ratio = Math.min(1, maxW / width);
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+            
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail });
+          } catch (e) {
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail: null });
+          }
+        };
+        
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve({ duration, width, height, thumbnail: null });
+        };
+        
+        // Таймаут на seek
+        setTimeout(() => {
+          if (video.readyState < 2) {
+            URL.revokeObjectURL(url);
+            resolve({ duration, width, height, thumbnail: null });
+          }
+        }, 3000);
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Не удалось прочитать видео'));
+      };
+    });
   }
 
   async _startVoiceRecording() {
@@ -523,4 +626,54 @@ function formatBytes(bytes) {
   const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${(bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
+}
+
+
+async function getVideoMetadata(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      
+      video.currentTime = Math.min(1, duration / 2);
+      
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxW = 400;
+          const ratio = Math.min(1, maxW / width);
+          canvas.width = width * ratio;
+          canvas.height = height * ratio;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+          
+          URL.revokeObjectURL(url);
+          resolve({ duration, width, height, thumbnail });
+        } catch (e) {
+          URL.revokeObjectURL(url);
+          resolve({ duration, width, height, thumbnail: null });
+        }
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ duration, width, height, thumbnail: null });
+      };
+    };
+    
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Не удалось прочитать видео'));
+    };
+  });
 }

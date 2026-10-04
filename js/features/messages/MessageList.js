@@ -197,6 +197,85 @@ export class MessageList {
       }
     }
 
+        // Видео
+    if (msg.type === 'video' && msg.attachments && msg.attachments[0]) {
+      const att = msg.attachments[0];
+      const videoWrap = el('div', {
+        style: {
+          position: 'relative',
+          marginBottom: '4px',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          maxWidth: '320px'
+        }
+      });
+
+      // Превью
+      const preview = el('div', {
+        style: {
+          backgroundImage: att.thumbnail ? `url(${att.thumbnail})` : 'linear-gradient(135deg, #667eea, #764ba2)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          width: '100%',
+          aspectRatio: att.width && att.height ? `${att.width}/${att.height}` : '16/9',
+          maxHeight: '400px',
+          display: 'grid',
+          placeItems: 'center'
+        }
+      });
+
+      // Play-кнопка
+      const playIcon = el('div', {
+        style: {
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          background: 'rgba(0,0,0,0.6)',
+          color: '#fff',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '24px',
+          backdropFilter: 'blur(8px)',
+          transition: 'transform 0.15s'
+        },
+        text: '▶'
+      });
+      preview.appendChild(playIcon);
+
+      // Длительность
+      if (att.duration) {
+        const dur = el('span', {
+          style: {
+            position: 'absolute',
+            bottom: '8px',
+            right: '8px',
+            padding: '2px 8px',
+            background: 'rgba(0,0,0,0.7)',
+            color: '#fff',
+            fontSize: '12px',
+            borderRadius: '8px',
+            fontFamily: 'monospace'
+          },
+          text: formatDuration(att.duration)
+        });
+        preview.appendChild(dur);
+      }
+
+      videoWrap.appendChild(preview);
+
+      // Открытие видео — либо нативное, либо в модалке
+      videoWrap.addEventListener('click', () => {
+        if (att.url) {
+          _openVideoModal(att.url, att.name || 'video');
+        } else {
+          toast.info('Видео недоступно (blob URL). Загрузите заново.');
+        }
+      });
+
+      bubble.appendChild(videoWrap);
+    }
+
     // Файлы
     if (msg.type === 'file' && msg.attachments && msg.attachments[0]) {
       const f = msg.attachments[0];
@@ -629,4 +708,44 @@ function isEmojiOnly(text) {
   if (hasLetters) return false;
 
   return emojiRegex.test(trimmed);
+}
+
+
+function _openVideoModal(src, name) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:grid;place-items:center;';
+  
+  const video = document.createElement('video');
+  video.src = src;
+  video.controls = true;
+  video.autoplay = true;
+  video.playsInline = true;
+  video.style.cssText = 'max-width:90vw;max-height:90vh;border-radius:12px;';
+  
+  const close = document.createElement('button');
+  close.textContent = '×';
+  close.style.cssText = 'position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;border:none;font-size:28px;cursor:pointer;';
+  close.addEventListener('click', () => {
+    video.pause();
+    overlay.remove();
+  });
+  
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      video.pause();
+      overlay.remove();
+    }
+  });
+  
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') {
+      video.pause();
+      overlay.remove();
+      document.removeEventListener('keydown', esc);
+    }
+  });
+  
+  overlay.appendChild(video);
+  overlay.appendChild(close);
+  document.body.appendChild(overlay);
 }
