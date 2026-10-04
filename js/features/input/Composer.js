@@ -325,7 +325,10 @@ export class Composer {
       fd.append('file', file);
       xhr.send(fd);
     });
-  } метаданные и превью из видео.
+  }
+
+  /**
+   * Извлекает метаданные и превью из видео.
    */
   async _getVideoMetadata(file) {
     return new Promise((resolve, reject) => {
