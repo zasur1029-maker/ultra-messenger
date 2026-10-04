@@ -273,7 +273,32 @@ export class MessageList {
         }
         
         videoWrap.appendChild(preview);
-        videoWrap.addEventListener('click', () => openVideoModal(att.url, att.name));
+        videoWrap.addEventListener('click', async () => {
+        // Если url есть — играем сразу
+        if (att.url) {
+          openVideoModal(att.url, att.name);
+          return;
+        }
+        
+        // Иначе — запрашиваем с сервера
+        toast.info('Загружаю видео с сервера…');
+        try {
+          const res = await fetch('/api/data');
+          const data = await res.json();
+          const full = (data.messages || []).find((x) => x.id === msg.id);
+          
+          if (full && full.attachments && full.attachments[0] && full.attachments[0].url) {
+            // Обновляем локально
+            att.url = full.attachments[0].url;
+            // Играем
+            openVideoModal(att.url, att.name);
+          } else {
+            toast.error('Видео не найдено на сервере');
+          }
+        } catch (e) {
+          toast.error('Ошибка загрузки видео');
+        }
+      });
         bubble.append(videoWrap);
       }
     }
