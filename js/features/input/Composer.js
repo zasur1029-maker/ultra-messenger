@@ -50,10 +50,12 @@ export class Composer {
     });
 
     // Attach
-    this.attachBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this._showAttachMenu();
-    });
+    this.attachBtn.addEventListener('click', () => this.fileInput.click());
+    this.fileInput.addEventListener('change', (e) => this._handleFiles(e.target.files));
+
+    // Drag & drop
+    const conv = document.querySelector('.conversation');
+    conv.addEventListener('dragover', (e) => { e.preventDefault(); conv.style.outline = '2px dashed var(--color-accent)'; });
     conv.addEventListener('dragleave', () => { conv.style.outline = ''; });
     conv.addEventListener('drop', (e) => {
       e.preventDefault();
