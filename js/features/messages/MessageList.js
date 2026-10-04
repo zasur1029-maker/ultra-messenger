@@ -164,17 +164,33 @@ export class MessageList {
     if (msg.type === 'image' && msg.attachments && msg.attachments[0]) {
       const att = msg.attachments[0];
       if (!att.url || att.broken) {
-        bubble.append(el('div', {
+        const placeholder = el('div', {
           style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 16px', background: 'rgba(0,0,0,0.06)', borderRadius: '12px', color: 'var(--color-text-tertiary)', fontSize: '13px', marginBottom: '4px', minWidth: '180px' },
-          text: '🖼 Изображение недоступно'
-        }));
+          text: '🖼 Загрузка…'
+        });
+        bubble.append(placeholder);
+        
+        // Подгружаем картинку
+        if (msg.id) {
+          fetch('/api/data').then((r) => r.json()).then((data) => {
+            const full = (data.messages || []).find((x) => x.id === msg.id);
+            if (full && full.attachments && full.attachments[0] && full.attachments[0].url) {
+              placeholder.replaceWith(el('img', {
+                class: 'bubble__image',
+                src: full.attachments[0].url,
+                style: { maxWidth: '100%', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer' },
+                onClick: () => window.open(full.attachments[0].url, '_blank')
+              }));
+            }
+          }).catch(() => {});
+        }
       } else {
         const img = el('img', {
           class: 'bubble__image',
           src: att.url,
           alt: 'Изображение',
           loading: 'lazy',
-          style: { maxWidth: '100%', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer' }
+          style: { maxWidth: '100%', maxHeight: '400px', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer', objectFit: 'cover' }
         });
         img.addEventListener('click', () => window.open(att.url, '_blank'));
         bubble.append(img);

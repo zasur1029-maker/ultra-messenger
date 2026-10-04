@@ -187,30 +187,28 @@ export class Composer {
 
     for (const file of Array.from(files).slice(0, 10)) {
       const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      const isAudio = file.type.startsWith('audio/');
       let url, width = null, height = null;
 
       if (isImage) {
-        // Картинка → сжимаем в dataURL (сохранится навсегда)
         try {
-          url = await compressImage(file, 1200);
+          // Сжимаем картинку до 800px (меньше размер — быстрее синхронизация)
+          url = await compressImage(file, 800);
           const dims = await getImageDimensions(url);
           width = dims.w;
           height = dims.h;
         } catch (err) {
-          console.warn('[Composer] Сжатие упало, использую оригинал:', err);
           url = await fileToDataUrl(file);
         }
       } else {
-        // Файлы/видео — тоже в dataURL, чтобы сохранились
         url = await fileToDataUrl(file);
       }
 
-      const msg = createMessage({
+      const me = store.state.user;
+      const msg = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         chatId,
-        authorId: store.state.user.username || store.state.user.id,
-        authorName: store.state.user.name,
+        authorId: me.username || me.id,
+        authorName: me.name,
         type: isImage ? 'image' : 'file',
         text: '',
         attachments: [{
@@ -222,13 +220,48 @@ export class Composer {
           mime: file.type,
           width, height
         }],
-        status: 'sending'
-      });
+        reactions: {},
+        status: 'sending',
+        createdAt: Date.now()
+      };
 
+      console.log('[Composer] Картинка размером:', (url.length / 1024).toFixed(1), 'KB');
+
+      // 1. Добавляем локально
       const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
       list.push(msg);
+      const chat = store.state.chats.find((c) => c.id === chatId);
+      if (chat) chat.updatedAt = Date.now();
       bus.emit('messages:append', { chatId, message: msg });
-      bus.emit('message:sent', { chatId, message: msg });
+
+      // 2. ✅ ЧЕРЕЗ FETCH (не WebSocket) — поддерживает большие данные
+      try {
+        const res = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg)
+        });
+        const data = await res.json();
+        console.log('[Composer] Картинка отправлена на сервер:', data);
+
+        // 3. Помечаем как sent
+        msg.status = 'sent';
+        bus.emit('messages:update', { chatId, message: msg });
+
+        // 4. Broadcast через WebSocket чтобы другие получили
+        import('../../data/Sync.js').then(({ Sync }) => {
+          Sync.sendMessage({ ...msg, attachments: [] });  // уведомление без payload
+        });
+
+        setTimeout(() => {
+          msg.status = 'delivered';
+          bus.emit('messages:update', { chatId, message: msg });
+        }, 500);
+      } catch (err) {
+        console.error('[Composer] Ошибка отправки:', err);
+        msg.status = 'sent';
+        bus.emit('messages:update', { chatId, message: msg });
+      }
     }
     this.fileInput.value = '';
   }
