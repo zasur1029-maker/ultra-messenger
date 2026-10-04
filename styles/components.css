@@ -1172,8 +1172,9 @@
 
 
 
+
 /* ============================================================
-   🎨 ЦВЕТНОЙ ПАТТЕРН TG WEB K
+   🎨 ПАТТЕРН TG — ФИОЛЕТОВЫЙ (точный цвет)
    ============================================================ */
 
 .conversation {
@@ -1182,7 +1183,7 @@
   isolation: isolate !important;
 }
 
-/* Базовый слой паттерна */
+/* Паттерн — фиолетовый через CSS-фильтр */
 .conversation::before {
   content: '' !important;
   position: absolute !important;
@@ -1191,41 +1192,15 @@
   background-repeat: repeat !important;
   background-size: 720px 1480px !important;
   background-position: center !important;
-  opacity: 0.22 !important;
+  opacity: 0.35 !important;
+  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
   pointer-events: none !important;
   z-index: 0 !important;
 }
 
-/* 🎨 МНОГОСЛОЙНАЯ ЦВЕТНАЯ ПОДСВЕТКА — как в TG */
+/* Убираем градиентную плёнку — она портит */
 .conversation::after {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background-image:
-    radial-gradient(circle at 15% 25%, rgba(135, 116, 225, 0.15) 0%, transparent 35%),
-    radial-gradient(circle at 85% 30%, rgba(255, 100, 130, 0.12) 0%, transparent 35%),
-    radial-gradient(circle at 50% 60%, rgba(100, 200, 150, 0.10) 0%, transparent 40%),
-    radial-gradient(circle at 20% 80%, rgba(255, 200, 100, 0.10) 0%, transparent 35%),
-    radial-gradient(circle at 80% 85%, rgba(100, 180, 255, 0.12) 0%, transparent 35%);
-  pointer-events: none !important;
-  z-index: 1 !important;
-  mix-blend-mode: screen !important;
-  animation: patternShift 30s ease-in-out infinite alternate !important;
-}
-
-@keyframes patternShift {
-  0% {
-    filter: hue-rotate(0deg);
-    transform: scale(1);
-  }
-  50% {
-    filter: hue-rotate(30deg);
-    transform: scale(1.02);
-  }
-  100% {
-    filter: hue-rotate(-30deg);
-    transform: scale(1);
-  }
+  display: none !important;
 }
 
 /* Сообщения поверх */
@@ -1245,30 +1220,21 @@
   z-index: 5 !important;
 }
 
-/* Светлая тема */
+/* Светлая тема — темнее и мягче */
 [data-theme="light"] .conversation {
-  background-color: #d4dbe2 !important;
+  background-color: #f0f4f8 !important;
 }
 
 [data-theme="light"] .conversation::before {
-  opacity: 0.35 !important;
-  filter: invert(1) hue-rotate(180deg) !important;
+  opacity: 0.25 !important;
+  filter: invert(30%) sepia(30%) saturate(1200%) hue-rotate(200deg) brightness(50%) !important;
 }
 
-[data-theme="light"] .conversation::after {
-  mix-blend-mode: multiply !important;
-  opacity: 0.5 !important;
-}
-
-/* AMOLED */
+/* AMOLED — только паттерн, фон чёрный */
 [data-theme="amoled"] .conversation {
   background-color: #000000 !important;
 }
 
 [data-theme="amoled"] .conversation::before {
-  opacity: 0.3 !important;
-}
-
-[data-theme="amoled"] .conversation::after {
-  opacity: 1.5 !important;
+  opacity: 0.4 !important;
 }
