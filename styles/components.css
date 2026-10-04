@@ -1181,7 +1181,19 @@
   isolation: isolate !important;
 }
 
-
+.sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 480px 986px !important;
+  background-position: center !important;
+  opacity: 0.18 !important;
+  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
 
 /* Содержимое сайдбара поверх паттерна */
 .sidebar__header,
@@ -1214,7 +1226,19 @@
   isolation: isolate !important;
 }
 
-
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 720px 1480px !important;
+  background-position: center !important;
+  opacity: 0.28 !important;
+  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
 
 .conversation::after {
   display: none !important;
@@ -1248,7 +1272,10 @@
 }
 
 [data-theme="light"] .sidebar::before,
-[data-theme="light"] 
+[data-theme="light"] .conversation::before {
+  filter: invert(30%) sepia(30%) saturate(1200%) hue-rotate(200deg) brightness(50%) !important;
+  opacity: 0.15 !important;
+}
 
 /* AMOLED */
 [data-theme="amoled"] .sidebar,
@@ -1257,12 +1284,20 @@
 }
 
 [data-theme="amoled"] .sidebar::before,
-[data-theme="amoled"] 
+[data-theme="amoled"] .conversation::before {
+  opacity: 0.3 !important;
+}
 
 /* ==== МОБИЛЬНАЯ ВЕРСИЯ — паттерн тоже на весь экран ==== */
 @media (max-width: 768px) {
-  
-  
+  .sidebar::before {
+    background-size: 360px 740px !important;
+    opacity: 0.2 !important;
+  }
+  .conversation::before {
+    background-size: 500px 1028px !important;
+    opacity: 0.25 !important;
+  }
 }
 
 /* ==== САЙДБАР ==== */
@@ -1272,7 +1307,19 @@
   isolation: isolate !important;
 }
 
-
+.sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 280px 575px !important;
+  background-position: center !important;
+  opacity: 0.09 !important;
+  filter: invert(60%) sepia(50%) saturate(900%) hue-rotate(230deg) brightness(110%) blur(0.4px) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
 
 .sidebar__header,
 .filters,
@@ -1303,7 +1350,19 @@
   isolation: isolate !important;
 }
 
-
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 420px 863px !important;
+  background-position: center !important;
+  opacity: 0.12 !important;
+  filter: invert(60%) sepia(50%) saturate(900%) hue-rotate(230deg) brightness(110%) blur(0.5px) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
 
 .conversation::after {
   display: none !important;
@@ -1336,7 +1395,10 @@
 }
 
 [data-theme="light"] .sidebar::before,
-[data-theme="light"] 
+[data-theme="light"] .conversation::before {
+  filter: invert(30%) sepia(20%) saturate(600%) hue-rotate(200deg) brightness(60%) blur(0.4px) !important;
+  opacity: 0.08 !important;
+}
 
 /* AMOLED */
 [data-theme="amoled"] .sidebar,
@@ -1345,12 +1407,20 @@
 }
 
 [data-theme="amoled"] .sidebar::before,
-[data-theme="amoled"] 
+[data-theme="amoled"] .conversation::before {
+  opacity: 0.15 !important;
+}
 
 /* Мобильная — ещё мельче */
 @media (max-width: 768px) {
-  
-  
+  .sidebar::before {
+    background-size: 220px 452px !important;
+    opacity: 0.1 !important;
+  }
+  .conversation::before {
+    background-size: 320px 658px !important;
+    opacity: 0.13 !important;
+  }
 }
 
 
