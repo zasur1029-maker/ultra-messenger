@@ -185,9 +185,10 @@ export class Composer {
     const chatId = store.state.activeChatId;
     if (!chatId) return;
 
-    const MAX_SIZE = 100 * 1024 * 1024;  // 100 МБ
+    const MAX_SIZE = 100 * 1024 * 1024;
 
     for (const file of Array.from(files).slice(0, 10)) {
+      // Проверка размера
       if (file.size > MAX_SIZE) {
         const sizeMB = (file.size / 1024 / 1024).toFixed(1);
         toast.error(`Файл слишком большой: ${sizeMB} МБ (макс. 100 МБ)`);
@@ -198,7 +199,7 @@ export class Composer {
       const isVideo = file.type.startsWith('video/');
       const me = store.state.user;
 
-      // === СОЗДАЁМ СООБЩЕНИЕ ЗАРАНЕЕ ===
+      // Создаём сообщение с прогрессом
       const msg = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         chatId,
@@ -213,7 +214,6 @@ export class Composer {
           size: file.size,
           sizeFormatted: formatBytes(file.size),
           mime: file.type,
-          width: null, height: null, duration: null, thumbnail: null,
           uploading: true,
           progress: 0
         }],
@@ -227,21 +227,30 @@ export class Composer {
       list.push(msg);
       bus.emit('messages:append', { chatId, message: msg });
 
-      // === ЗАГРУЖАЕМ НА СЕРВЕР С ПРОГРЕССОМ ===
-      try {
-        // Превью для видео
-        if (isVideo) {
-          try {
-            const meta = await getVideoMetadata(file);
-            msg.attachments[0].thumbnail = meta.thumbnail;
-            msg.attachments[0].duration = meta.duration;
-            msg.attachments[0].width = meta.width;
-            msg.attachments[0].height = meta.height;
-            bus.emit('messages:update', { chatId, message: msg });
-          } catch (e) { console.warn(e); }
-        }
+      // Превью для видео
+      if (isVideo) {
+        try {
+          const meta = await getVideoMetadata(file);
+          msg.attachments[0].thumbnail = meta.thumbnail;
+          msg.attachments[0].duration = meta.duration;
+          msg.attachments[0].width = meta.width;
+          msg.attachments[0].height = meta.height;
+          bus.emit('messages:update', { chatId, message: msg });
+        } catch (e) { console.warn(e); }
+      }
 
-        // Загрузка через XMLHttpRequest (для прогресса)
+      // Превью для картинок
+      if (isImage) {
+        try {
+          const preview = await fileToDataUrl(file);
+          msg.attachments[0].thumbnail = preview;
+          msg.attachments[0].url = preview;
+          bus.emit('messages:update', { chatId, message: msg });
+        } catch (e) {}
+      }
+
+      // === ЗАГРУЗКА НА СЕРВЕР ===
+      try {
         const uploaded = await uploadFileWithProgress(file, (progress) => {
           msg.attachments[0].progress = progress;
           bus.emit('messages:update', { chatId, message: msg });
@@ -253,14 +262,12 @@ export class Composer {
         msg.attachments[0].uploading = false;
         msg.attachments[0].progress = 100;
 
-        // Сохраняем на сервере
-        const res = await fetch('/api/messages', {
+        // Сохраняем в БД
+        await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(msg)
         });
-        const data = await res.json();
-        console.log('[Composer] Сохранено:', data);
 
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
@@ -276,7 +283,7 @@ export class Composer {
         }, 500);
       } catch (err) {
         console.error('[Composer] Ошибка:', err);
-        toast.error('Не удалось загрузить: ' + err.message);
+        toast.error('Ошибка загрузки: ' + err.message);
         msg.attachments[0].uploading = false;
         msg.attachments[0].error = true;
         bus.emit('messages:update', { chatId, message: msg });
