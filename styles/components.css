@@ -1660,3 +1660,97 @@
   z-index: 2 !important;
   overflow: hidden !important;
 }
+
+/* ============================================================
+   🔥 УБИРАЮ ПАНЕЛЬ-ОБЁРТКУ У ЧАТА
+   ============================================================ */
+
+/* Убираем панель у conversation — сообщения прямо на паттерне */
+.conversation {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Паттерн на .conversation */
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 420px 863px !important;
+  background-position: center !important;
+  opacity: 0.12 !important;
+  filter: invert(60%) sepia(50%) saturate(900%) hue-rotate(230deg) brightness(110%) blur(0.5px) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Убираем паттерн у .messages — он теперь на .conversation */
+.messages {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.messages::before {
+  display: none !important;
+}
+
+/* Шапка чата — сплошная полоса сверху */
+.conv-header {
+  background: #212121 !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #2f2f2f !important;
+}
+
+/* Composer — сплошная полоса снизу */
+.composer {
+  background: #212121 !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-top: 1px solid #2f2f2f !important;
+}
+
+/* Убираем внешние отступы у .app — чтобы чат прилипал к краям */
+.app {
+  padding: 0 !important;
+  gap: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 420px 863px !important;
+  background-position: center !important;
+}
+
+/* Затемнение поверх паттерна на .app (для контраста) */
+.app::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(15, 15, 15, 0.5) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Сайдбар — парящий, с отступом */
+.sidebar {
+  margin: 8px 0 8px 8px !important;
+  border-radius: 16px !important;
+  z-index: 2 !important;
+}
+
+/* Conversation — прилипает к правому краю, без отступа */
+.conversation {
+  margin: 8px 8px 8px 0 !important;
+  border-radius: 16px !important;
+  z-index: 2 !important;
+  overflow: hidden !important;
+}
