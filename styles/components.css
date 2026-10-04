@@ -1300,10 +1300,6 @@
   }
 }
 
-/* ============================================================
-   🎨 ПАТТЕРН TG — МЕЛКИЙ И БЛЕДНЫЙ
-   ============================================================ */
-
 /* ==== САЙДБАР ==== */
 .sidebar {
   background-color: #212121 !important;
@@ -1424,5 +1420,61 @@
   .conversation::before {
     background-size: 320px 658px !important;
     opacity: 0.13 !important;
+  }
+}
+
+
+/* ============================================================
+   🎨 ПАТТЕРН — на фоне страницы (.app)
+   ============================================================ */
+.app {
+  background-color: #0f0f0f !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 420px 863px !important;
+  background-position: center !important;
+}
+
+.app::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(15, 15, 15, 0.55) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Светлая тема */
+[data-theme="light"] .app {
+  background-color: #d4dbe2 !important;
+}
+
+[data-theme="light"] .app::before {
+  background: rgba(240, 244, 248, 0.7) !important;
+}
+
+[data-theme="light"] .sidebar,
+[data-theme="light"] .conversation {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* AMOLED */
+[data-theme="amoled"] .app {
+  background-color: #000000 !important;
+}
+
+[data-theme="amoled"] .app::before {
+  background: rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="amoled"] .sidebar,
+[data-theme="amoled"] .conversation {
+  background: rgba(10, 10, 10, 0.9) !important;
+}
+
+/* Мобильная — паттерн мельче */
+@media (max-width: 768px) {
+  .app {
+    background-size: 320px 658px !important;
   }
 }

@@ -37,21 +37,7 @@
 .auth__subtitle { color: var(--color-text-secondary); font-size: 14px; text-align: center; margin-top: -8px; }
 
 /* ========= APP ========= */
-.app {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
-  height: 100dvh;
-  background: var(--color-bg-app);
-}
-
 /* ========= SIDEBAR ========= */
-.sidebar {
-  display: flex; flex-direction: column;
-  background: var(--color-bg-sidebar);
-  border-right: 1px solid var(--color-divider);
-  position: relative;
-  overflow: hidden;
-}
 .sidebar__header {
   display: flex; align-items: center;
   gap: 8px;
@@ -226,8 +212,7 @@
 
 /* ========= MOBILE ========= */
 @media (max-width: 768px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
+    .sidebar {
     position: absolute; inset: 0;
     z-index: 2;
     transition: transform var(--duration-normal);
@@ -241,6 +226,131 @@
     visibility: hidden;
   }
   .app.has-conv .conversation { transform: translateX(0); visibility: visible; }
+  .icon-btn--mobile { display: grid !important; }
+}
+.icon-btn--mobile { display: none; }
+
+/* ========= APP — паттерн везде ========= */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100dvh;
+  background-color: #0f0f0f;
+  background-image: url('../../assets/patterns/pattern.svg');
+  background-repeat: repeat;
+  background-size: 420px 863px;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  padding: 8px;
+  gap: 8px;
+}
+
+/* Затемнение паттерна */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.5);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ========= SIDEBAR — парящий ========= */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: rgba(33, 33, 33, 0.85);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ========= CONVERSATION — парящий ========= */
+.conversation {
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  z-index: 2;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Убираем ::before у sidebar и conversation — паттерн уже на .app */
+.sidebar::before,
+.conversation::before {
+  display: none !important;
+}
+
+.sidebar__header,
+.filters,
+.chat-list,
+.messages,
+.conv-header,
+.composer {
+  position: relative;
+  z-index: 2;
+}
+
+.sidebar__header {
+  background: transparent !important;
+}
+
+.filters {
+  background: transparent !important;
+}
+
+.conv-header {
+  background: transparent !important;
+}
+
+.composer {
+  background: transparent !important;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    padding: 6px;
+    gap: 6px;
+  }
+  .sidebar {
+    position: absolute;
+    inset: 6px;
+    z-index: 2;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+  }
+  .app.has-conv .sidebar {
+    transform: translateX(-110%);
+  }
+  .conversation {
+    position: absolute;
+    inset: 6px;
+    z-index: 3;
+    transform: translateX(110%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+    border-radius: 16px;
+  }
+  .app.has-conv .conversation {
+    transform: translateX(0);
+    visibility: visible;
+  }
   .icon-btn--mobile { display: grid !important; }
 }
 .icon-btn--mobile { display: none; }
