@@ -1289,16 +1289,7 @@
 }
 
 /* ==== МОБИЛЬНАЯ ВЕРСИЯ — паттерн тоже на весь экран ==== */
-@media (max-width: 768px) {
-  .sidebar::before {
-    background-size: 360px 740px !important;
-    opacity: 0.2 !important;
-  }
-  .conversation::before {
-    background-size: 500px 1028px !important;
-    opacity: 0.25 !important;
-  }
-}
+
 
 /* ==== САЙДБАР ==== */
 .sidebar {
@@ -1412,16 +1403,7 @@
 }
 
 /* Мобильная — ещё мельче */
-@media (max-width: 768px) {
-  .sidebar::before {
-    background-size: 220px 452px !important;
-    opacity: 0.1 !important;
-  }
-  .conversation::before {
-    background-size: 320px 658px !important;
-    opacity: 0.13 !important;
-  }
-}
+
 
 
 
