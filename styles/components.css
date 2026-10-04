@@ -1173,17 +1173,63 @@
 
 
 
+
 /* ============================================================
-   🎨 ПАТТЕРН TG — ФИОЛЕТОВЫЙ (точный цвет)
+   🎨 ПАТТЕРН TG — ФИОЛЕТОВЫЙ ВЕЗДЕ
    ============================================================ */
 
+/* ==== САЙДБАР ==== */
+.sidebar {
+  background-color: #212121 !important;
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+.sidebar::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 480px 986px !important;
+  background-position: center !important;
+  opacity: 0.18 !important;
+  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Содержимое сайдбара поверх паттерна */
+.sidebar__header,
+.filters,
+.chat-list {
+  position: relative !important;
+  z-index: 2 !important;
+  background: transparent !important;
+}
+
+.sidebar__header {
+  background: rgba(33, 33, 33, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.filters {
+  background: rgba(33, 33, 33, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* Активный чат — плотный фиолетовый */
+.chat-item.is-active {
+  background: #8774e1 !important;
+}
+
+/* ==== ЧАТ ==== */
 .conversation {
   background-color: #0f0f0f !important;
   position: relative !important;
   isolation: isolate !important;
 }
 
-/* Паттерн — фиолетовый через CSS-фильтр */
 .conversation::before {
   content: '' !important;
   position: absolute !important;
@@ -1192,13 +1238,12 @@
   background-repeat: repeat !important;
   background-size: 720px 1480px !important;
   background-position: center !important;
-  opacity: 0.35 !important;
+  opacity: 0.28 !important;
   filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
   pointer-events: none !important;
   z-index: 0 !important;
 }
 
-/* Убираем градиентную плёнку — она портит */
 .conversation::after {
   display: none !important;
 }
@@ -1213,94 +1258,48 @@
 .conv-header {
   position: relative !important;
   z-index: 5 !important;
+  background: rgba(33, 33, 33, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 .composer {
   position: relative !important;
   z-index: 5 !important;
+  background: rgba(33, 33, 33, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
-/* Светлая тема — темнее и мягче */
+/* Светлая тема */
+[data-theme="light"] .sidebar,
 [data-theme="light"] .conversation {
   background-color: #f0f4f8 !important;
 }
 
+[data-theme="light"] .sidebar::before,
 [data-theme="light"] .conversation::before {
-  opacity: 0.25 !important;
   filter: invert(30%) sepia(30%) saturate(1200%) hue-rotate(200deg) brightness(50%) !important;
+  opacity: 0.15 !important;
 }
 
-/* AMOLED — только паттерн, фон чёрный */
+/* AMOLED */
+[data-theme="amoled"] .sidebar,
 [data-theme="amoled"] .conversation {
   background-color: #000000 !important;
 }
 
+[data-theme="amoled"] .sidebar::before,
 [data-theme="amoled"] .conversation::before {
-  opacity: 0.4 !important;
+  opacity: 0.3 !important;
 }
 
-/* ============================================================
-   🎨 ПАТТЕРН TG — ФИОЛЕТОВЫЙ (точный цвет)
-   ============================================================ */
-
-.conversation {
-  background-color: #0f0f0f !important;
-  position: relative !important;
-  isolation: isolate !important;
-}
-
-/* Паттерн — фиолетовый через CSS-фильтр */
-.conversation::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background-image: url('../../assets/patterns/pattern.svg') !important;
-  background-repeat: repeat !important;
-  background-size: 720px 1480px !important;
-  background-position: center !important;
-  opacity: 0.35 !important;
-  filter: invert(60%) sepia(80%) saturate(2000%) hue-rotate(230deg) brightness(90%) !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-}
-
-/* Убираем градиентную плёнку — она портит */
-.conversation::after {
-  display: none !important;
-}
-
-/* Сообщения поверх */
-.messages {
-  position: relative !important;
-  z-index: 3 !important;
-  background: transparent !important;
-}
-
-.conv-header {
-  position: relative !important;
-  z-index: 5 !important;
-}
-
-.composer {
-  position: relative !important;
-  z-index: 5 !important;
-}
-
-/* Светлая тема — темнее и мягче */
-[data-theme="light"] .conversation {
-  background-color: #f0f4f8 !important;
-}
-
-[data-theme="light"] .conversation::before {
-  opacity: 0.25 !important;
-  filter: invert(30%) sepia(30%) saturate(1200%) hue-rotate(200deg) brightness(50%) !important;
-}
-
-/* AMOLED — только паттерн, фон чёрный */
-[data-theme="amoled"] .conversation {
-  background-color: #000000 !important;
-}
-
-[data-theme="amoled"] .conversation::before {
-  opacity: 0.4 !important;
+/* ==== МОБИЛЬНАЯ ВЕРСИЯ — паттерн тоже на весь экран ==== */
+@media (max-width: 768px) {
+  .sidebar::before {
+    background-size: 360px 740px !important;
+    opacity: 0.2 !important;
+  }
+  .conversation::before {
+    background-size: 500px 1028px !important;
+    opacity: 0.25 !important;
+  }
 }
