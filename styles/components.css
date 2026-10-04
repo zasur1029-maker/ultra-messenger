@@ -1426,3 +1426,67 @@
 
 
 
+
+/* ============================================================
+   🎨 ПАТТЕРН TG — только в области сообщений
+   ============================================================ */
+
+/* В .messages добавляем паттерн через ::before */
+.messages {
+  position: relative !important;
+}
+
+.messages::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 320px 658px !important;
+  background-position: center !important;
+  opacity: 0.08 !important;
+  filter: invert(60%) sepia(50%) saturate(900%) hue-rotate(230deg) brightness(120%) blur(0.3px) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Все сообщения — поверх паттерна */
+.messages > * {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+/* Шапка чата — плотный фон БЕЗ паттерна */
+.conv-header {
+  background: #212121 !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Composer — плотный фон БЕЗ паттерна */
+.composer {
+  background: #212121 !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Светлая тема */
+[data-theme="light"] .messages::before {
+  filter: invert(30%) sepia(20%) saturate(600%) hue-rotate(200deg) brightness(70%) blur(0.3px) !important;
+  opacity: 0.06 !important;
+}
+
+[data-theme="light"] .conv-header,
+[data-theme="light"] .composer {
+  background: #ffffff !important;
+}
+
+/* AMOLED */
+[data-theme="amoled"] .messages::before {
+  opacity: 0.1 !important;
+}
+
+[data-theme="amoled"] .conv-header,
+[data-theme="amoled"] .composer {
+  background: #0a0a0a !important;
+}
