@@ -268,7 +268,7 @@ export class Composer {
         // Для видео — не отправляем весь blob, только метаданные + превью
         let msgToSend = msg;
         if (isVideo && msg.attachments[0].isBlob) {
-          // Видео — отправляем только превью и метаданные (blob не пройдёт через JSON)
+          // Видео — только метаданные (blob локальный)
           msgToSend = {
             ...msg,
             attachments: [{

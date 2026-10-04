@@ -3,7 +3,7 @@
  * Стратегия: рендерим все сообщения, но контент скрываем через content-visibility.
  * Для 10000+ — можно расширить до полной виртуализации.
  */
-import { el, formatTime, formatDate, groupBy, debounce } from '../../core/Utils.js';
+import { el, formatTime, formatDate, formatDuration, groupBy, debounce } from '../../core/Utils.js';
 import { icon, iconHTML } from '../../core/Icon.js';
 import { renderMarkdown, stripMarkdown } from './MarkdownLite.js';
 import { store } from '../../core/Store.js';
@@ -207,26 +207,26 @@ export class MessageList {
           borderRadius: '12px',
           overflow: 'hidden',
           cursor: 'pointer',
-          maxWidth: '320px'
+          maxWidth: '320px',
+          minWidth: '200px'
         }
       });
 
-      // Превью
+      // Превью (thumbnail) или gradient
       const preview = el('div', {
         style: {
-          backgroundImage: att.thumbnail ? `url(${att.thumbnail})` : 'linear-gradient(135deg, #667eea, #764ba2)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          background: att.thumbnail ? `url(${att.thumbnail}) center/cover` : 'linear-gradient(135deg, #667eea, #764ba2)',
           width: '100%',
           aspectRatio: att.width && att.height ? `${att.width}/${att.height}` : '16/9',
           maxHeight: '400px',
           display: 'grid',
-          placeItems: 'center'
+          placeItems: 'center',
+          position: 'relative'
         }
       });
 
       // Play-кнопка
-      const playIcon = el('div', {
+      preview.appendChild(el('div', {
         style: {
           width: '60px',
           height: '60px',
@@ -236,16 +236,14 @@ export class MessageList {
           display: 'grid',
           placeItems: 'center',
           fontSize: '24px',
-          backdropFilter: 'blur(8px)',
-          transition: 'transform 0.15s'
+          backdropFilter: 'blur(8px)'
         },
         text: '▶'
-      });
-      preview.appendChild(playIcon);
+      }));
 
       // Длительность
       if (att.duration) {
-        const dur = el('span', {
+        preview.appendChild(el('span', {
           style: {
             position: 'absolute',
             bottom: '8px',
@@ -258,18 +256,19 @@ export class MessageList {
             fontFamily: 'monospace'
           },
           text: formatDuration(att.duration)
-        });
-        preview.appendChild(dur);
+        }));
       }
 
       videoWrap.appendChild(preview);
 
-      // Открытие видео — либо нативное, либо в модалке
-      videoWrap.addEventListener('click', () => {
+      // Клик — открыть видео (если URL доступен)
+      videoWrap.addEventListener('click', async () => {
+        // Если url есть и это blob — играем локально
         if (att.url) {
-          _openVideoModal(att.url, att.name || 'video');
+          openVideoModal(att.url);
         } else {
-          toast.info('Видео недоступно (blob URL). Загрузите заново.');
+          // Пытаемся загрузить с сервера
+          toast.info('Видео доступно только на устройстве отправителя');
         }
       });
 
