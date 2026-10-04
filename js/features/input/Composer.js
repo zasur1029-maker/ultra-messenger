@@ -617,6 +617,101 @@ export class Composer {
     this.replyPreview.hidden = true;
     this.replyPreview.replaceChildren();
   }
+
+  _showAttachMenu() {
+    console.log('[Composer] Открываю меню прикрепления');
+    document.querySelector('.attach-menu')?.remove();
+
+    const menu = document.createElement('div');
+    menu.className = 'attach-menu';
+    menu.style.cssText = 'position: fixed; background: #2b2b2b; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); padding: 6px; min-width: 220px; z-index: 999999; border: 1px solid #2f2f2f;';
+
+    const items = [
+      { icon: 'image', label: 'Фото или видео', accept: 'image/*,video/*' },
+      { icon: 'file', label: 'Документ', accept: '.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx' },
+      { icon: 'voice', label: 'Аудио', accept: 'audio/*' },
+      { divider: true },
+      { icon: 'poll', label: 'Опрос', disabled: true },
+      { icon: 'check', label: 'Чек-лист', disabled: true }
+    ];
+
+    const iconPaths = {
+      image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+      file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+      voice: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>',
+      poll: '<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>',
+      check: '<path d="M20 6 9 17l-5-5"/>'
+    };
+
+    items.forEach((item) => {
+      if (item.divider) {
+        const d = document.createElement('div');
+        d.style.cssText = 'height: 1px; background: #2f2f2f; margin: 4px 6px;';
+        menu.appendChild(d);
+        return;
+      }
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.style.cssText = 'display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; font-size: 14px; font-family: inherit; cursor: ' + (item.disabled ? 'not-allowed' : 'pointer') + '; text-align: left; color: ' + (item.disabled ? '#707579' : '#ffffff') + ';';
+
+      if (!item.disabled) {
+        btn.addEventListener('mouseenter', () => { btn.style.background = '#3a3a3a'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+      }
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '20');
+      svg.setAttribute('height', '20');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('stroke-linecap', 'round');
+      svg.setAttribute('stroke-linejoin', 'round');
+      svg.innerHTML = iconPaths[item.icon] || '';
+      btn.appendChild(svg);
+
+      const label = document.createElement('span');
+      label.textContent = item.label;
+      btn.appendChild(label);
+
+      if (!item.disabled) {
+        btn.addEventListener('click', () => {
+          menu.remove();
+          this.fileInput.accept = item.accept || '*/*';
+          this.fileInput.click();
+        });
+      }
+
+      menu.appendChild(btn);
+    });
+
+    document.body.appendChild(menu);
+
+    const rect = this.attachBtn.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    menu.style.left = Math.max(8, rect.left) + 'px';
+    menu.style.top = Math.max(8, rect.top - menuRect.height - 8) + 'px';
+
+    const closeOnOutside = (ev) => {
+      if (!menu.contains(ev.target) && ev.target !== this.attachBtn) {
+        menu.remove();
+        document.removeEventListener('click', closeOnOutside);
+      }
+    };
+    const closeOnEsc = (ev) => {
+      if (ev.key === 'Escape') {
+        menu.remove();
+        document.removeEventListener('keydown', closeOnEsc);
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener('click', closeOnOutside);
+      document.addEventListener('keydown', closeOnEsc);
+    }, 10);
+  }
+
 }
 
 function getImageDimensions(url) {
@@ -726,106 +821,4 @@ function uploadFileWithProgress(file, onProgress) {
     fd.append('file', file);
     xhr.send(fd);
   });
-
-  _showAttachMenu() {
-    console.log('[Composer] Открываю меню прикрепления');
-    document.querySelector('.attach-menu')?.remove();
-
-    const menu = document.createElement('div');
-    menu.className = 'attach-menu';
-    menu.style.position = 'fixed';
-    menu.style.background = '#2b2b2b';
-    menu.style.borderRadius = '12px';
-    menu.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.5)';
-    menu.style.padding = '6px';
-    menu.style.minWidth = '220px';
-    menu.style.zIndex = '999999';
-    menu.style.border = '1px solid #2f2f2f';
-
-    const items = [
-      { icon: 'image', label: 'Фото или видео', accept: 'image/*,video/*' },
-      { icon: 'file', label: 'Документ', accept: '.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx' },
-      { icon: 'voice', label: 'Аудио', accept: 'audio/*' },
-      { divider: true },
-      { icon: 'poll', label: 'Опрос', disabled: true },
-      { icon: 'check', label: 'Чек-лист', disabled: true }
-    ];
-
-    const iconPaths = {
-      image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
-      file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
-      voice: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>',
-      poll: '<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>',
-      check: '<path d="M20 6 9 17l-5-5"/>'
-    };
-
-    items.forEach((item) => {
-      if (item.divider) {
-        const d = document.createElement('div');
-        d.style.cssText = 'height: 1px; background: #2f2f2f; margin: 4px 6px;';
-        menu.appendChild(d);
-        return;
-      }
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.style.cssText = 'display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: none; background: transparent; border-radius: 8px; font-size: 14px; font-family: inherit; cursor: ' + (item.disabled ? 'not-allowed' : 'pointer') + '; text-align: left; color: ' + (item.disabled ? '#707579' : '#ffffff') + ';';
-
-      if (!item.disabled) {
-        btn.addEventListener('mouseenter', () => { btn.style.background = '#3a3a3a'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
-      }
-
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('width', '20');
-      svg.setAttribute('height', '20');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('fill', 'none');
-      svg.setAttribute('stroke', 'currentColor');
-      svg.setAttribute('stroke-width', '2');
-      svg.setAttribute('stroke-linecap', 'round');
-      svg.setAttribute('stroke-linejoin', 'round');
-      svg.innerHTML = iconPaths[item.icon] || '';
-      btn.appendChild(svg);
-
-      const label = document.createElement('span');
-      label.textContent = item.label;
-      btn.appendChild(label);
-
-      if (!item.disabled) {
-        btn.addEventListener('click', () => {
-          menu.remove();
-          this.fileInput.accept = item.accept || '*/*';
-          this.fileInput.click();
-        });
-      }
-
-      menu.appendChild(btn);
-    });
-
-    document.body.appendChild(menu);
-
-    const rect = this.attachBtn.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    menu.style.left = Math.max(8, rect.left) + 'px';
-    menu.style.top = Math.max(8, rect.top - menuRect.height - 8) + 'px';
-
-    const closeOnOutside = (ev) => {
-      if (!menu.contains(ev.target) && ev.target !== this.attachBtn) {
-        menu.remove();
-        document.removeEventListener('click', closeOnOutside);
-      }
-    };
-    const closeOnEsc = (ev) => {
-      if (ev.key === 'Escape') {
-        menu.remove();
-        document.removeEventListener('keydown', closeOnEsc);
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener('click', closeOnOutside);
-      document.addEventListener('keydown', closeOnEsc);
-    }, 10);
-  }
-
 }
