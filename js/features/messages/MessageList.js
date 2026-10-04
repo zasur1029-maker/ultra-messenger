@@ -197,82 +197,85 @@ export class MessageList {
       }
     }
 
-        // Видео
+        // Видео (как в Telegram — превью + круглая play)
     if (msg.type === 'video' && msg.attachments && msg.attachments[0]) {
       const att = msg.attachments[0];
-      const videoWrap = el('div', {
-        style: {
-          position: 'relative',
-          marginBottom: '4px',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          maxWidth: '320px',
-          minWidth: '200px'
-        }
-      });
-
-      // Превью (thumbnail) или gradient
-      const preview = el('div', {
-        style: {
-          background: att.thumbnail ? `url(${att.thumbnail}) center/cover` : 'linear-gradient(135deg, #667eea, #764ba2)',
-          width: '100%',
-          aspectRatio: att.width && att.height ? `${att.width}/${att.height}` : '16/9',
-          maxHeight: '400px',
-          display: 'grid',
-          placeItems: 'center',
-          position: 'relative'
-        }
-      });
-
-      // Play-кнопка
-      preview.appendChild(el('div', {
-        style: {
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          background: 'rgba(0,0,0,0.6)',
-          color: '#fff',
-          display: 'grid',
-          placeItems: 'center',
-          fontSize: '24px',
-          backdropFilter: 'blur(8px)'
-        },
-        text: '▶'
-      }));
-
-      // Длительность
-      if (att.duration) {
-        preview.appendChild(el('span', {
+      
+      // Прогресс загрузки
+      if (att.uploading) {
+        const progressEl = el('div', {
           style: {
-            position: 'absolute',
-            bottom: '8px',
-            right: '8px',
-            padding: '2px 8px',
-            background: 'rgba(0,0,0,0.7)',
-            color: '#fff',
-            fontSize: '12px',
-            borderRadius: '8px',
-            fontFamily: 'monospace'
-          },
-          text: formatDuration(att.duration)
+            position: 'relative',
+            width: '240px',
+            height: '160px',
+            borderRadius: '12px',
+            background: att.thumbnail ? `url(${att.thumbnail}) center/cover` : 'linear-gradient(135deg, #667eea, #764ba2)',
+            overflow: 'hidden',
+            marginBottom: '4px'
+          }
+        });
+        
+        // Оверлей с затемнением
+        progressEl.appendChild(el('div', {
+          style: 'position:absolute;inset:0;background:rgba(0,0,0,0.6);'
         }));
-      }
-
-      videoWrap.appendChild(preview);
-
-      // Клик — открыть видео (если URL доступен)
-      videoWrap.addEventListener('click', async () => {
-        // Если url есть и это blob — играем локально
-        if (att.url) {
-          openVideoModal(att.url);
-        } else {
-          // Пытаемся загрузить с сервера
-          toast.info('Видео доступно только на устройстве отправителя');
+        
+        // Процент
+        progressEl.appendChild(el('div', {
+          style: 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:24px;font-weight:600;',
+          text: (att.progress || 0) + '%'
+        }));
+        
+        // Полоса прогресса
+        const progressBar = el('div', {
+          style: 'position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,0.3);'
+        });
+        progressBar.appendChild(el('div', {
+          style: `height:100%;width:${att.progress || 0}%;background:#2aabee;transition:width 0.2s;`
+        }));
+        progressEl.appendChild(progressBar);
+        
+        bubble.append(progressEl);
+      } else if (att.error) {
+        bubble.append(el('div', {
+          style: 'padding:20px;background:rgba(229,57,53,0.1);border-radius:12px;color:var(--color-danger);font-size:13px;',
+          text: '❌ Не удалось загрузить'
+        }));
+      } else {
+        // Готовое видео
+        const videoWrap = el('div', {
+          style: 'position:relative;border-radius:12px;overflow:hidden;cursor:pointer;max-width:320px;margin-bottom:4px;'
+        });
+        
+        const preview = el('div', {
+          style: {
+            background: att.thumbnail ? `url(${att.thumbnail}) center/cover` : 'linear-gradient(135deg, #667eea, #764ba2)',
+            width: '100%',
+            aspectRatio: att.width && att.height ? att.width + '/' + att.height : '16/9',
+            maxHeight: '400px',
+            display: 'grid',
+            placeItems: 'center',
+            position: 'relative'
+          }
+        });
+        
+        // Круглая play-кнопка (как в TG)
+        preview.appendChild(el('div', {
+          style: 'width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;display:grid;place-items:center;backdrop-filter:blur(10px);font-size:28px;padding-left:6px;',
+          text: '▶'
+        }));
+        
+        if (att.duration) {
+          preview.appendChild(el('span', {
+            style: 'position:absolute;bottom:8px;right:8px;padding:3px 8px;background:rgba(0,0,0,0.7);color:#fff;font-size:12px;border-radius:8px;font-family:monospace;',
+            text: formatDuration(att.duration)
+          }));
         }
-      });
-
-      bubble.appendChild(videoWrap);
+        
+        videoWrap.appendChild(preview);
+        videoWrap.addEventListener('click', () => openVideoModal(att.url, att.name));
+        bubble.append(videoWrap);
+      }
     }
 
     // Файлы

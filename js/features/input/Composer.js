@@ -188,7 +188,6 @@ export class Composer {
     const MAX_SIZE = 100 * 1024 * 1024;  // 100 МБ
 
     for (const file of Array.from(files).slice(0, 10)) {
-      // ✅ ПРОВЕРКА РАЗМЕРА
       if (file.size > MAX_SIZE) {
         const sizeMB = (file.size / 1024 / 1024).toFixed(1);
         toast.error(`Файл слишком большой: ${sizeMB} МБ (макс. 100 МБ)`);
@@ -197,40 +196,9 @@ export class Composer {
 
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
-      let url, width = null, height = null, duration = null, thumbnail = null;
-
-      if (isImage) {
-        try {
-          url = await compressImage(file, 1200);
-          const dims = await getImageDimensions(url);
-          width = dims.w;
-          height = dims.h;
-        } catch (err) {
-          url = await fileToDataUrl(file);
-        }
-      } else if (isVideo) {
-        // ✅ ВИДЕО
-        try {
-          // Создаём превью видео (первый кадр)
-          const meta = await getVideoMetadata(file);
-          duration = meta.duration;
-          width = meta.width;
-          height = meta.height;
-          thumbnail = meta.thumbnail;
-          // Само видео — как blob URL (тяжёлое в base64)
-          url = URL.createObjectURL(file);
-          
-          console.log('[Composer] Видео:', meta.width + 'x' + meta.height, 
-                      'длительность:', meta.duration.toFixed(1) + 'с');
-        } catch (err) {
-          console.warn('[Composer] Не удалось обработать видео:', err);
-          url = URL.createObjectURL(file);
-        }
-      } else {
-        url = await fileToDataUrl(file);
-      }
-
       const me = store.state.user;
+
+      // === СОЗДАЁМ СООБЩЕНИЕ ЗАРАНЕЕ ===
       const msg = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         chatId,
@@ -240,59 +208,66 @@ export class Composer {
         text: '',
         attachments: [{
           kind: isImage ? 'image' : (isVideo ? 'video' : 'file'),
-          url,
+          url: null,
           name: file.name,
           size: file.size,
           sizeFormatted: formatBytes(file.size),
           mime: file.type,
-          width, height, duration,
-          thumbnail,
-          isBlob: isVideo  // ← видео как blob URL
+          width: null, height: null, duration: null, thumbnail: null,
+          uploading: true,
+          progress: 0
         }],
         reactions: {},
         status: 'sending',
         createdAt: Date.now()
       };
 
-      console.log('[Composer] Отправляю:', msg.type, '-', (file.size / 1024).toFixed(1), 'KB');
-
-      // Локально
+      // Показываем сразу
       const list = store.state.messages[chatId] || (store.state.messages[chatId] = []);
       list.push(msg);
-      const chat = store.state.chats.find((c) => c.id === chatId);
-      if (chat) chat.updatedAt = Date.now();
       bus.emit('messages:append', { chatId, message: msg });
 
-      // ✅ НА СЕРВЕР — через fetch (для больших файлов)
+      // === ЗАГРУЖАЕМ НА СЕРВЕР С ПРОГРЕССОМ ===
       try {
-        // Для видео — не отправляем весь blob, только метаданные + превью
-        let msgToSend = msg;
-        if (isVideo && msg.attachments[0].isBlob) {
-          // Видео — только метаданные (blob локальный)
-          msgToSend = {
-            ...msg,
-            attachments: [{
-              ...msg.attachments[0],
-              url: null,  // ← URL только локальный
-              thumbnail: msg.attachments[0].thumbnail
-            }]
-          };
+        // Превью для видео
+        if (isVideo) {
+          try {
+            const meta = await getVideoMetadata(file);
+            msg.attachments[0].thumbnail = meta.thumbnail;
+            msg.attachments[0].duration = meta.duration;
+            msg.attachments[0].width = meta.width;
+            msg.attachments[0].height = meta.height;
+            bus.emit('messages:update', { chatId, message: msg });
+          } catch (e) { console.warn(e); }
         }
-        
+
+        // Загрузка через XMLHttpRequest (для прогресса)
+        const uploaded = await uploadFileWithProgress(file, (progress) => {
+          msg.attachments[0].progress = progress;
+          bus.emit('messages:update', { chatId, message: msg });
+        });
+
+        console.log('[Composer] Загружено:', uploaded);
+
+        msg.attachments[0].url = uploaded.url;
+        msg.attachments[0].uploading = false;
+        msg.attachments[0].progress = 100;
+
+        // Сохраняем на сервере
         const res = await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msgToSend)
+          body: JSON.stringify(msg)
         });
         const data = await res.json();
-        console.log('[Composer] На сервер:', data);
+        console.log('[Composer] Сохранено:', data);
 
         msg.status = 'sent';
         bus.emit('messages:update', { chatId, message: msg });
 
-        // Уведомление через WebSocket (без payload)
+        // Уведомление другим
         import('../../data/Sync.js').then(({ Sync }) => {
-          Sync.sendMessage({ ...msg, attachments: [], isMetaOnly: true });
+          Sync.sendMessage({ ...msg, attachments: msg.attachments });
         });
 
         setTimeout(() => {
@@ -301,7 +276,9 @@ export class Composer {
         }, 500);
       } catch (err) {
         console.error('[Composer] Ошибка:', err);
-        msg.status = 'sent';
+        toast.error('Не удалось загрузить: ' + err.message);
+        msg.attachments[0].uploading = false;
+        msg.attachments[0].error = true;
         bus.emit('messages:update', { chatId, message: msg });
       }
     }
@@ -309,7 +286,39 @@ export class Composer {
   }
 
   /**
-   * Извлекает метаданные и превью из видео.
+   * Загрузка файла с прогрессом (XMLHttpRequest).
+   */
+  _uploadFileWithProgress(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error('Upload failed: ' + xhr.status));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+
+      const fd = new FormData();
+      fd.append('file', file);
+      xhr.send(fd);
+    });
+  } метаданные и превью из видео.
    */
   async _getVideoMetadata(file) {
     return new Promise((resolve, reject) => {
@@ -675,5 +684,36 @@ async function getVideoMetadata(file) {
       URL.revokeObjectURL(url);
       reject(new Error('Не удалось прочитать видео'));
     };
+  });
+}
+
+/**
+ * Загружает файл с прогрессом через XHR.
+ */
+function uploadFileWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch (e) { reject(new Error('Invalid JSON')); }
+      } else {
+        reject(new Error('Upload failed: ' + xhr.status));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+
+    const fd = new FormData();
+    fd.append('file', file);
+    xhr.send(fd);
   });
 }

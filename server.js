@@ -3,12 +3,20 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { Pool } = require('pg');
+const multer = require('multer');
 
 const app = express();
+
+const upload = multer({
+  dest: UPLOADS_DIR,
+  limits: { fileSize: 100 * 1024 * 1024 }  // 100 МБ
+});
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
