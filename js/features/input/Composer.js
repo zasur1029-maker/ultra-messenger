@@ -140,16 +140,24 @@ export class Composer {
 
     // === СТАТУСЫ ===
     // sending → sent (0.5 сек)
-    // Сразу sent (WebSocket уведомит остальных)
-    msg.status = 'sent';
-    bus.emit('messages:update', { chatId, message: msg });
-    import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
+    setTimeout(() => {
+      if (msg.status === 'sending') {
+        msg.status = 'sent';
+        bus.emit('messages:update', { chatId, message: msg });
+        console.log('[Composer] → sent');
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
+      }
+    }, 500);
 
     // sent → delivered (1.5 сек)
-    // Сразу delivered
-    msg.status = 'delivered';
-    bus.emit('messages:update', { chatId, message: msg });
-    import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
+    setTimeout(() => {
+      if (msg.status === 'sent') {
+        msg.status = 'delivered';
+        bus.emit('messages:update', { chatId, message: msg });
+        console.log('[Composer] → delivered');
+        import('../../data/Sync.js').then(({ Sync }) => Sync.sendMessage(msg)).catch(() => {});
+      }
+    }, 1500);
 
     // Отправка через WebSocket сразу
     import('../../data/Sync.js').then(({ Sync }) => {
@@ -243,21 +251,10 @@ export class Composer {
 
       // === ЗАГРУЗКА НА СЕРВЕР ===
       try {
-        let uploaded;
-        if (isImage) {
-          const dataUrl = await fileToDataUrl(file);
-          const res = await fetch("/api/upload-base64", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dataUrl, name: file.name })
-          });
-          uploaded = await res.json();
-        } else {
-          uploaded = await uploadFileWithProgress(file, (progress) => {
+        const uploaded = await uploadFileWithProgress(file, (progress) => {
           msg.attachments[0].progress = progress;
           bus.emit('messages:update', { chatId, message: msg });
-          });
-        }
+        });
 
         console.log('[Composer] Загружено:', uploaded);
 

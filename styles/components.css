@@ -1564,131 +1564,80 @@
    📱 МОБИЛЬНАЯ ВЕРСИЯ — только раздельные экраны
    ============================================================ */
 
-/* Скрыть кнопку Назад на десктопе */
-@media (min-width: 769px) {
-  #backBtn,
-  .icon-btn--mobile {
-    display: none !important;
-  }
-}
-
-/* ============================================================
-   📱 МОБИЛЬНАЯ ВЕРСИЯ — с учётом реальной высоты экрана
-   ============================================================ */
-
 @media (max-width: 768px) {
+  /* Убираем ВСЁ лишнее */
   html, body {
-    height: 100%;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
+    height: 100dvh !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* Используем dvh — Dynamic Viewport Height (реальная видимая область) */
+  /* Приложение — на весь экран */
   .app {
     display: block !important;
     position: relative !important;
-    width: 100%;
-    height: 100dvh; /* ← ключевое! */
+    width: 100vw !important;
+    height: 100dvh !important;
+    height: 100vh !important;
     padding: 0 !important;
+    margin: 0 !important;
     gap: 0 !important;
     background: #0f0f0f !important;
     overflow: hidden !important;
   }
 
-  /* Fallback для старых браузеров */
-  @supports not (height: 100dvh) {
-    .app { height: 100vh; }
-  }
-
   /* Сайдбар — весь экран */
   .sidebar {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 100;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    height: 100vh !important;
+    z-index: 100 !important;
     border-radius: 0 !important;
     border: none !important;
-    transform: translateX(0);
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    background: #212121;
-    display: flex;
-    flex-direction: column;
+    transform: translateX(0) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    background: #212121 !important;
   }
 
+  /* Сайдбар уезжает когда чат открыт */
   .app.has-conv .sidebar {
-    transform: translateX(-100%);
-    pointer-events: none;
+    transform: translateX(-100%) !important;
+    pointer-events: none !important;
   }
 
-  /* Чат — весь экран с правильной высотой */
+  /* Чат — весь экран */
   .conversation {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 101;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    height: 100vh !important;
+    z-index: 101 !important;
     border-radius: 0 !important;
     border: none !important;
-    transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    visibility: visible;
-    background: #0f0f0f;
+    transform: translateX(100%) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    visibility: visible !important;
+    background: #0f0f0f !important;
     box-shadow: none !important;
-    display: flex;
-    flex-direction: column;
   }
 
+  /* Чат появляется */
   .app.has-conv .conversation {
-    transform: translateX(0);
+    transform: translateX(0) !important;
   }
 
-  /* Сообщения — flex: 1 (займёт всё свободное место) */
-  .messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 10px !important;
-    min-height: 0; /* важно для flex-контейнера */
-  }
-
-  /* Composer — внизу, всегда виден */
-  .composer {
-    flex-shrink: 0;
-    padding: 8px 10px !important;
-    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
-    gap: 4px !important;
-    background: #212121 !important;
-    border-top: 1px solid #2f2f2f;
-  }
-
-  .composer__input {
-    min-height: 40px;
-    padding: 10px 14px;
-    font-size: 16px;
-    border-radius: 22px;
-  }
-
-  .composer .icon-btn {
-    width: 42px;
-    height: 42px;
-  }
-
-  /* Шапка чата — сверху, фиксированная */
-  .conv-header {
-    flex-shrink: 0;
-    background: #212121 !important;
-    border-bottom: 1px solid #2f2f2f;
-    padding-top: max(8px, env(safe-area-inset-top));
-  }
-
-  /* Кнопка Назад */
+  /* Кнопка Назад — показать */
   #backBtn {
     display: grid !important;
   }
@@ -1697,328 +1646,58 @@
     display: grid !important;
   }
 
-  /* Сообщения — шире */
+  /* Composer — компактнее */
+  .composer {
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+
+  .composer__input {
+    min-height: 40px !important;
+    padding: 8px 14px !important;
+    font-size: 16px !important;
+  }
+
+  .composer .icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Сообщения компактнее */
+  .messages {
+    padding: 8px 10px !important;
+  }
+
   .msg {
-    max-width: 88%;
+    max-width: 88% !important;
   }
 
-  /* FAB — над composer */
+  /* Паттерн меньше */
+  .conversation {
+    background-size: 280px 575px !important;
+  }
+
+  /* Скрыть панель фильтров? Нет, оставить */
+  .filter {
+    padding: 5px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* FAB меньше */
   .fab {
-    width: 52px;
-    height: 52px;
-    right: 16px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    z-index: 50;
+    width: 52px !important;
+    height: 52px !important;
+    right: 16px !important;
+    bottom: 16px !important;
   }
 
-  /* Мобильный composer: маленькие отступы */
-  .sidebar__header {
-    padding-top: max(8px, env(safe-area-inset-top));
-  }
-
-  /* Скрыть панель рисования на мобильном (если есть) */
-  .drawing-toolbar {
-    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  /* Скрыть лишние кнопки в шапке чата */
+  .conv-header__actions .icon-btn:not(#backBtn):not(#chatMenuBtn) {
+    display: none !important;
   }
 }
 
 /* Скрыть кнопку Назад на десктопе */
-@media (min-width: 769px) {
-  #backBtn,
-  .icon-btn--mobile {
-    display: none !important;
-  }
-}
-
-/* ============================================================
-   ⚡ ПРОИЗВОДИТЕЛЬНОСТЬ НА МОБИЛЬНЫХ (iPhone)
-   ============================================================ */
-
-@media (max-width: 768px) {
-  /* ❌ УБИРАЕМ backdrop-filter — он ОЧЕНЬ тормозит на iOS */
-  .sidebar__header,
-  .filters,
-  .conv-header,
-  .composer,
-  .toast,
-  .ctx,
-  .modal,
-  .dropdown,
-  .attach-menu,
-  .emoji-picker {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  /* ❌ УБИРАЕМ паттерн SVG — 507 KB тормозит рендер */
-  .conversation::before,
-  .sidebar::before,
-  .messages::before,
-  .app::before {
-    display: none !important;
-  }
-
-  /* Чистый фон без паттерна */
-  .conversation,
-  .sidebar,
-  .messages {
-    background-image: none !important;
-  }
-
-  /* ❌ УБИРАЕМ тени с пузырей */
-  .bubble {
-    box-shadow: none !important;
-  }
-
-  /* ❌ УБИРАЕМ сложные градиенты */
-  .msg--out .bubble {
-    background: #766ac8 !important;
-  }
-
-  .msg--in .bubble {
-    background: #212121 !important;
-  }
-
-  /* ❌ УБИРАЕМ transition и animation */
-  * {
-    transition-duration: 0.1s !important;
-    animation-duration: 0.15s !important;
-  }
-
-  /* ❌ УБИРАЕМ сложные фильтры */
-  .avatar__online {
-    animation: none !important;
-  }
-
-  .fab {
-    box-shadow: none !important;
-  }
-
-  /* ✅ Оптимизация рендеринга */
-  .messages,
-  .chat-list {
-    -webkit-overflow-scrolling: touch !important;
-    contain: layout style paint !important;
-  }
-
-  .msg,
-  .bubble {
-    contain: layout style !important;
-  }
-
-  /* Меньше blur, меньше проблем */
-  .conv-header {
-    background: #212121 !important;
-  }
-
-  .composer {
-    background: #212121 !important;
-  }
-
-  .sidebar__header {
-    background: #212121 !important;
-  }
-
-  .filters {
-    background: #212121 !important;
-  }
-
-  /* Уменьшаем размер шрифта — меньше reflow */
-  body {
-    font-size: 14px !important;
-  }
-
-  /* Оптимизация анимации появления сообщения */
-  .msg {
-    animation: none !important;
-  }
-}
-
-/* Для старых iPhone (iOS < 15) */
-@supports (-webkit-touch-callout: none) {
-  .conversation::before,
-  .sidebar::before,
-  .messages::before {
-    display: none !important;
-  }
-  
-  * {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-}
-
-/* ============================================================
-   ⚡ ПРОИЗВОДИТЕЛЬНОСТЬ НА МОБИЛЬНЫХ (iPhone)
-   ============================================================ */
-
-@media (max-width: 768px) {
-  /* ❌ УБИРАЕМ backdrop-filter — он ОЧЕНЬ тормозит на iOS */
-  .sidebar__header,
-  .filters,
-  .conv-header,
-  .composer,
-  .toast,
-  .ctx,
-  .modal,
-  .dropdown,
-  .attach-menu,
-  .emoji-picker {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  /* ❌ УБИРАЕМ паттерн SVG — 507 KB тормозит рендер */
-  .conversation::before,
-  .sidebar::before,
-  .messages::before,
-  .app::before {
-    display: none !important;
-  }
-
-  /* Чистый фон без паттерна */
-  .conversation,
-  .sidebar,
-  .messages {
-    background-image: none !important;
-  }
-
-  /* ❌ УБИРАЕМ тени с пузырей */
-  .bubble {
-    box-shadow: none !important;
-  }
-
-  /* ❌ УБИРАЕМ сложные градиенты */
-  .msg--out .bubble {
-    background: #766ac8 !important;
-  }
-
-  .msg--in .bubble {
-    background: #212121 !important;
-  }
-
-  /* ❌ УБИРАЕМ transition и animation */
-  * {
-    transition-duration: 0.1s !important;
-    animation-duration: 0.15s !important;
-  }
-
-  /* ❌ УБИРАЕМ сложные фильтры */
-  .avatar__online {
-    animation: none !important;
-  }
-
-  .fab {
-    box-shadow: none !important;
-  }
-
-  /* ✅ Оптимизация рендеринга */
-  .messages,
-  .chat-list {
-    -webkit-overflow-scrolling: touch !important;
-    contain: layout style paint !important;
-  }
-
-  .msg,
-  .bubble {
-    contain: layout style !important;
-  }
-
-  /* Меньше blur, меньше проблем */
-  .conv-header {
-    background: #212121 !important;
-  }
-
-  .composer {
-    background: #212121 !important;
-  }
-
-  .sidebar__header {
-    background: #212121 !important;
-  }
-
-  .filters {
-    background: #212121 !important;
-  }
-
-  /* Уменьшаем размер шрифта — меньше reflow */
-  body {
-    font-size: 14px !important;
-  }
-
-  /* Оптимизация анимации появления сообщения */
-  .msg {
-    animation: none !important;
-  }
-}
-
-/* Для старых iPhone (iOS < 15) */
-@supports (-webkit-touch-callout: none) {
-  .conversation::before,
-  .sidebar::before,
-  .messages::before {
-    display: none !important;
-  }
-  
-  * {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-}
-
-/* ============================================================
-   📱 МОБИЛЬНЫЙ ФИКС — только ускорение, без слома UI
-   ============================================================ */
-
-@media (max-width: 768px) {
-  /* Отключаем backdrop-filter (тормозит на iOS) */
-  .sidebar__header,
-  .filters,
-  .conv-header,
-  .composer {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: #212121 !important;
-  }
-
-  /* Отключаем паттерн (тяжёлый) */
-  .conversation::before,
-  .sidebar::before,
-  .messages::before,
-  .app::before {
-    display: none !important;
-  }
-
-  .conversation,
-  .sidebar,
-  .messages {
-    background-image: none !important;
-  }
-
-  /* Тени убираем */
-  .bubble {
-    box-shadow: none !important;
-  }
-
-  /* Кнопки работают — НЕ трогаем их! */
-  .icon-btn,
-  .filter,
-  .chat-item,
-  .fab,
-  .composer__input,
-  button {
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
-  }
-
-  /* Плавный скролл на iOS */
-  .messages,
-  .chat-list {
-    -webkit-overflow-scrolling: touch !important;
-  }
-}
-
-/* Скрываем «Назад» на десктопе */
 @media (min-width: 769px) {
   #backBtn,
   .icon-btn--mobile {
