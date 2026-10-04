@@ -1169,3 +1169,65 @@
   background: rgba(135, 116, 225, 0.3) !important;
   border-radius: 3px !important;
 }
+
+/* ============================================================
+   🎨 ФОН ЧАТА — ПАТТЕРН TG WEB K
+   ============================================================ */
+
+.conversation {
+  background-color: #0f0f0f !important;
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+/* Паттерн как отдельный слой */
+.conversation::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url('../../assets/patterns/pattern.svg') !important;
+  background-repeat: repeat !important;
+  background-size: 1440px 2960px !important;
+  background-position: center top !important;
+  opacity: 0.04 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+/* Сообщения поверх паттерна */
+.messages {
+  position: relative !important;
+  z-index: 2 !important;
+  background: transparent !important;
+}
+
+/* Шапка чата — поверх */
+.conv-header {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Composer — поверх */
+.composer {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Для светлой темы — паттерн темнее */
+[data-theme="light"] .conversation {
+  background-color: #e6ebee !important;
+}
+
+[data-theme="light"] .conversation::before {
+  opacity: 0.08 !important;
+  filter: invert(1) !important;
+}
+
+/* AMOLED — почти незаметный */
+[data-theme="amoled"] .conversation {
+  background-color: #000000 !important;
+}
+
+[data-theme="amoled"] .conversation::before {
+  opacity: 0.03 !important;
+}
