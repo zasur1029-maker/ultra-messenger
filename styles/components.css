@@ -1171,8 +1171,9 @@
 }
 
 
+
 /* ============================================================
-   🎨 ФОН ЧАТА — ПАТТЕРН TG WEB K
+   🎨 ЦВЕТНОЙ ПАТТЕРН TG WEB K
    ============================================================ */
 
 .conversation {
@@ -1181,7 +1182,7 @@
   isolation: isolate !important;
 }
 
-/* Паттерн как отдельный слой — УВЕЛИЧЕННАЯ ВИДИМОСТЬ */
+/* Базовый слой паттерна */
 .conversation::before {
   content: '' !important;
   position: absolute !important;
@@ -1190,15 +1191,47 @@
   background-repeat: repeat !important;
   background-size: 720px 1480px !important;
   background-position: center !important;
-  opacity: 0.15 !important;
+  opacity: 0.22 !important;
   pointer-events: none !important;
   z-index: 0 !important;
 }
 
-/* Сообщения поверх паттерна */
+/* 🎨 МНОГОСЛОЙНАЯ ЦВЕТНАЯ ПОДСВЕТКА — как в TG */
+.conversation::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image:
+    radial-gradient(circle at 15% 25%, rgba(135, 116, 225, 0.15) 0%, transparent 35%),
+    radial-gradient(circle at 85% 30%, rgba(255, 100, 130, 0.12) 0%, transparent 35%),
+    radial-gradient(circle at 50% 60%, rgba(100, 200, 150, 0.10) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(255, 200, 100, 0.10) 0%, transparent 35%),
+    radial-gradient(circle at 80% 85%, rgba(100, 180, 255, 0.12) 0%, transparent 35%);
+  pointer-events: none !important;
+  z-index: 1 !important;
+  mix-blend-mode: screen !important;
+  animation: patternShift 30s ease-in-out infinite alternate !important;
+}
+
+@keyframes patternShift {
+  0% {
+    filter: hue-rotate(0deg);
+    transform: scale(1);
+  }
+  50% {
+    filter: hue-rotate(30deg);
+    transform: scale(1.02);
+  }
+  100% {
+    filter: hue-rotate(-30deg);
+    transform: scale(1);
+  }
+}
+
+/* Сообщения поверх */
 .messages {
   position: relative !important;
-  z-index: 2 !important;
+  z-index: 3 !important;
   background: transparent !important;
 }
 
@@ -1218,8 +1251,13 @@
 }
 
 [data-theme="light"] .conversation::before {
-  opacity: 0.4 !important;
-  filter: invert(1) brightness(0.3) !important;
+  opacity: 0.35 !important;
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+[data-theme="light"] .conversation::after {
+  mix-blend-mode: multiply !important;
+  opacity: 0.5 !important;
 }
 
 /* AMOLED */
@@ -1228,5 +1266,9 @@
 }
 
 [data-theme="amoled"] .conversation::before {
-  opacity: 0.2 !important;
+  opacity: 0.3 !important;
+}
+
+[data-theme="amoled"] .conversation::after {
+  opacity: 1.5 !important;
 }
