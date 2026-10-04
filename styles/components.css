@@ -682,3 +682,161 @@
   color: var(--color-text-tertiary);
   font-size: 14px;
 }
+
+/* ============================================================
+   🔥 ЖЁСТКИЙ ФИКС ПУЗЫРЕЙ — точная копия TG Web K
+   ============================================================ */
+
+.bubble {
+  position: relative !important;
+  padding: 6px 10px !important;
+  background: #212121 !important;
+  border-radius: 12px !important;
+  word-wrap: break-word !important;
+  overflow-wrap: anywhere !important;
+  box-shadow: none !important;
+  max-width: 100% !important;
+}
+
+.msg--out .bubble {
+  background: #766ac8 !important;
+}
+
+/* Хвостик входящего — слева снизу */
+.bubble--tail-in {
+  border-bottom-left-radius: 4px !important;
+}
+
+.bubble--tail-in::after {
+  content: '' !important;
+  position: absolute !important;
+  left: -7px !important;
+  bottom: 0 !important;
+  width: 12px !important;
+  height: 16px !important;
+  background: #212121 !important;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%) !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+/* Хвостик исходящего — справа снизу */
+.msg--out .bubble--tail-out {
+  border-bottom-right-radius: 4px !important;
+}
+
+.msg--out .bubble--tail-out::after {
+  content: '' !important;
+  position: absolute !important;
+  right: -7px !important;
+  bottom: 0 !important;
+  width: 12px !important;
+  height: 16px !important;
+  background: #766ac8 !important;
+  clip-path: polygon(0 0, 100% 100%, 0 100%) !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+/* Мета внутри пузыря — плотнее */
+.bubble__meta {
+  float: right !important;
+  margin: 4px 0 -2px 8px !important;
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  line-height: 1 !important;
+}
+
+.msg--out .bubble__meta {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.bubble__meta svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.bubble__meta .check--read {
+  color: #ffffff !important;
+}
+
+/* Текст */
+.bubble__text {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+  color: #ffffff !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.msg--out .bubble__text {
+  color: #ffffff !important;
+}
+
+/* Аватар сообщения */
+.msg__avatar {
+  align-self: flex-end !important;
+  margin-bottom: 2px !important;
+}
+
+.msg {
+  display: flex !important;
+  gap: 8px !important;
+  max-width: min(75%, 640px) !important;
+  align-self: flex-start !important;
+  margin-top: 2px !important;
+}
+
+.msg--out {
+  align-self: flex-end !important;
+  flex-direction: row-reverse !important;
+}
+
+.msg--grouped {
+  margin-top: 1px !important;
+}
+
+.msg--grouped .msg__avatar {
+  visibility: hidden !important;
+}
+
+/* День */
+.day-divider {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 12px 0 8px !important;
+}
+
+.day-divider span {
+  padding: 4px 12px !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 9999px !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Фон чата — тёмный как в TG */
+.conversation {
+  background: #0f0f0f !important;
+}
+
+/* Сайдбар — чёрный как в TG */
+.sidebar {
+  background: #212121 !important;
+}
+
+/* Composer фон */
+.composer {
+  background: #212121 !important;
+  border-top: 1px solid #2f2f2f !important;
+}
+
+/* Верхняя шапка чата */
+.conv-header {
+  background: #212121 !important;
+  border-bottom: 1px solid #2f2f2f !important;
+}
