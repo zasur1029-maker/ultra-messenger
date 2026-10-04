@@ -163,36 +163,39 @@ export class MessageList {
     // Картинки
     if (msg.type === 'image' && msg.attachments && msg.attachments[0]) {
       const att = msg.attachments[0];
-      if (!att.url || att.broken) {
-        const placeholder = el('div', {
-          style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 16px', background: 'rgba(0,0,0,0.06)', borderRadius: '12px', color: 'var(--color-text-tertiary)', fontSize: '13px', marginBottom: '4px', minWidth: '180px' },
-          text: '🖼 Загрузка…'
+
+      if (att.uploading) {
+        // Показываем прогресс
+        const progressEl = el('div', {
+          style: {
+            width: '200px', height: '150px', borderRadius: '12px',
+            background: att.thumbnail ? 'url(' + att.thumbnail + ') center/cover' : 'linear-gradient(135deg, #667eea, #764ba2)',
+            display: 'grid', placeItems: 'center', position: 'relative', marginBottom: '4px'
+          }
         });
-        bubble.append(placeholder);
-        
-        // Подгружаем картинку
-        if (msg.id) {
-          fetch('/api/data').then((r) => r.json()).then((data) => {
-            const full = (data.messages || []).find((x) => x.id === msg.id);
-            if (full && full.attachments && full.attachments[0] && full.attachments[0].url) {
-              placeholder.replaceWith(el('img', {
-                class: 'bubble__image',
-                src: full.attachments[0].url,
-                style: { maxWidth: '100%', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer' },
-                onClick: () => window.open(full.attachments[0].url, '_blank')
-              }));
-            }
-          }).catch(() => {});
-        }
-      } else {
+        progressEl.appendChild(el('div', {
+          style: 'position:absolute;inset:0;background:rgba(0,0,0,0.5);border-radius:12px;display:grid;place-items:center;color:#fff;font-size:14px;',
+          text: (att.progress || 0) + '%'
+        }));
+        bubble.append(progressEl);
+      } else if (att.url) {
+        // Показываем сразу — url уже есть
         const img = el('img', {
           class: 'bubble__image',
           src: att.url,
           alt: 'Изображение',
           loading: 'lazy',
-          style: { maxWidth: '100%', maxHeight: '400px', borderRadius: '12px', marginBottom: '4px', cursor: 'pointer', objectFit: 'cover' }
+          style: 'max-width:100%;max-height:400px;border-radius:12px;margin-bottom:4px;cursor:pointer;object-fit:cover;'
         });
         img.addEventListener('click', () => window.open(att.url, '_blank'));
+        bubble.append(img);
+      } else if (att.thumbnail) {
+        // Есть только превью
+        const img = el('img', {
+          class: 'bubble__image',
+          src: att.thumbnail,
+          style: 'max-width:100%;max-height:400px;border-radius:12px;margin-bottom:4px;'
+        });
         bubble.append(img);
       }
     }

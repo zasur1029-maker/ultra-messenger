@@ -124,6 +124,49 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.use('/uploads', express.static(UPLOADS_DIR));
 
+// Новый endpoint — сохранение base64 в БД
+app.post('/api/upload-base64', async (req, res) => {
+  try {
+    const { dataUrl, name } = req.body;
+    if (!dataUrl) return res.status(400).json({ error: 'No dataUrl' });
+
+    const id = 'file_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS files (id TEXT PRIMARY KEY, name TEXT, data TEXT, created_at BIGINT)`
+    );
+    await pool.query(
+      `INSERT INTO files (id, name, data, created_at) VALUES ($1, $2, $3, $4)`,
+      [id, name || 'file', dataUrl, Date.now()]
+    );
+
+    console.log('📤 Base64 сохранён:', id, '(', (dataUrl.length / 1024).toFixed(1), 'KB )');
+    res.json({ ok: true, url: '/api/file/' + id, id });
+  } catch (e) {
+    console.error('upload-base64:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Раздача файлов из БД
+app.get('/api/file/:id', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM files WHERE id = $1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).send('Not found');
+
+    const dataUrl = r.rows[0].data;
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return res.status(500).send('Invalid');
+
+    const mime = match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=31536000');
+    res.send(buffer);
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});
+
 // === API ===
 app.get('/api/data', async (req, res) => {
   try {
