@@ -134,14 +134,11 @@
 .conversation {
   display: flex;
   flex-direction: column;
-  background: #0f0f0f;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
   position: relative;
   min-width: 0;
   overflow: hidden;
   z-index: 2;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .empty {
@@ -222,17 +219,18 @@
 
 /* ========= MOBILE ========= */
 @media (max-width: 768px) {
-    .sidebar {
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
     position: absolute; inset: 0;
     z-index: 2;
-    transition: transform var(--duration-normal);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .app.has-conv .sidebar { transform: translateX(-100%); }
   .conversation {
     position: absolute; inset: 0;
     z-index: 3;
     transform: translateX(100%);
-    transition: transform var(--duration-normal);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     visibility: hidden;
   }
   .app.has-conv .conversation { transform: translateX(0); visibility: visible; }
@@ -248,8 +246,6 @@
   background: #0f0f0f;
   position: relative;
   overflow: hidden;
-  padding: 8px;
-  gap: 8px;
 }
 
 /* Затемнение паттерна */
