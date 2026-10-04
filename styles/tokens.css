@@ -1,37 +1,43 @@
 :root {
-  /* TG Light Theme */
-  --color-bg-app: #ffffff;
-  --color-bg-elevated: #ffffff;
-  --color-bg-sidebar: #ffffff;
-  --color-bg-chat: #e6ebee;
-  --color-bg-hover: #f4f4f5;
-  --color-bg-active: #3390ec;
-  --color-bg-scrim: rgba(0, 0, 0, 0.3);
+  /* ===== TG DARK THEME — точная копия Web K ===== */
+  --color-bg-app: #212121;
+  --color-bg-elevated: #2b2b2b;
+  --color-bg-sidebar: #212121;
+  --color-bg-chat: #0f0f0f;
+  --color-bg-hover: #2c2c2c;
+  --color-bg-active: #766ac8;
+  --color-bg-scrim: rgba(0, 0, 0, 0.6);
 
-  --color-bubble-out: #eeffde;
-  --color-bubble-in: #ffffff;
+  /* Пузыри — как в TG */
+  --color-bubble-out: #766ac8;
+  --color-bubble-in: #212121;
 
-  --color-text-primary: #000000;
-  --color-text-secondary: #707579;
-  --color-text-tertiary: #a2acb4;
+  /* Текст */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #aaaaaa;
+  --color-text-tertiary: #707579;
   --color-text-on-accent: #ffffff;
-  --color-text-link: #3390ec;
+  --color-text-link: #8774e1;
 
-  --color-accent: #3390ec;
-  --color-accent-hover: #2481dd;
-  --color-accent-pressed: #1a6fc7;
-  --color-accent-subtle: rgba(51, 144, 236, 0.1);
+  /* Акцент — фиолетовый (как TG Web K) */
+  --color-accent: #8774e1;
+  --color-accent-hover: #766ac8;
+  --color-accent-pressed: #6558b8;
+  --color-accent-subtle: rgba(135, 116, 225, 0.15);
 
+  /* Статусы */
   --color-danger: #e53935;
   --color-success: #4dcd5e;
   --color-online: #4dcd5e;
-  --color-check-read: #4fc3f7;
+  --color-check-read: #ffffff;
+  --color-check-delivered: rgba(255, 255, 255, 0.5);
 
-  --color-divider: #f0f0f0;
-  --color-border: #e6ebee;
+  /* Границы */
+  --color-divider: #2f2f2f;
+  --color-border: #2f2f2f;
 
-  /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Типографика */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'SF Mono', Consolas, monospace;
 
   --text-xs: 12px;
@@ -40,12 +46,15 @@
   --text-lg: 16px;
   --text-xl: 18px;
   --text-2xl: 22px;
+  --text-3xl: 28px;
 
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
+  /* Радиусы */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -53,52 +62,74 @@
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.12);
+  /* Тени — минимальные, как в TG */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.5);
 
+  /* Анимации */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-instant: 100ms;
   --duration-fast: 150ms;
   --duration-normal: 250ms;
+  --duration-slow: 400ms;
 
+  /* Z-index */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-toast: 600;
+
+  /* Размеры */
   --sidebar-width: 420px;
+  --sidebar-width-min: 320px;
+  --sidebar-width-max: 500px;
   --header-height: 56px;
   --composer-min-height: 52px;
+  --avatar-sm: 34px;
   --avatar-md: 42px;
   --avatar-lg: 54px;
+  --avatar-xl: 120px;
 
-  color-scheme: light;
+  --blur-sm: blur(8px);
+  --blur-md: blur(16px);
+  --blur-lg: blur(24px);
+
+  color-scheme: dark;
 }
 
-/* TG Dark Theme */
-[data-theme="dark"] {
-  --color-bg-app: #212121;
-  --color-bg-elevated: #212121;
-  --color-bg-sidebar: #212121;
-  --color-bg-chat: #0f0f0f;
-  --color-bg-hover: #2c2c2c;
+/* Light theme — если переключат */
+[data-theme="light"] {
+  --color-bg-app: #ffffff;
+  --color-bg-elevated: #ffffff;
+  --color-bg-sidebar: #ffffff;
+  --color-bg-chat: #e6ebee;
+  --color-bg-hover: #f4f4f5;
   --color-bg-active: #3390ec;
-  --color-bg-scrim: rgba(0, 0, 0, 0.6);
 
-  --color-bubble-out: #766ac8;
-  --color-bubble-in: #212121;
+  --color-bubble-out: #eeffde;
+  --color-bubble-in: #ffffff;
 
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #aaaaaa;
-  --color-text-tertiary: #707579;
+  --color-text-primary: #000000;
+  --color-text-secondary: #707579;
+  --color-text-tertiary: #a2acb4;
 
-  --color-divider: #2f2f2f;
-  --color-border: #2f2f2f;
+  --color-accent: #3390ec;
+  --color-accent-hover: #2481dd;
+  --color-accent-subtle: rgba(51, 144, 236, 0.1);
 
-  --color-accent: #8774e1;
-  --color-accent-hover: #766ac8;
-  --color-accent-pressed: #6558b8;
-  --color-accent-subtle: rgba(135, 116, 225, 0.15);
+  --color-divider: #f0f0f0;
+  --color-border: #e6ebee;
 
   --color-check-read: #4fc3f7;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 /* AMOLED */
@@ -109,24 +140,10 @@
   --color-bg-chat: #000000;
   --color-bg-hover: #141414;
   --color-bubble-out: #766ac8;
-  --color-bubble-in: #101010;
+  --color-bubble-in: #0f0f0f;
   --color-divider: #1a1a1a;
   --color-border: #1a1a1a;
 }
-
-/* Accents */
-[data-accent="blue"]   { --color-accent: #3390ec; }
-[data-accent="purple"] { --color-accent: #8774e1; --color-accent-hover: #766ac8; }
-[data-accent="green"]  { --color-accent: #4dcd5e; }
-[data-accent="pink"]   { --color-accent: #e35b9d; }
-[data-accent="orange"] { --color-accent: #f38f3d; }
-[data-accent="red"]    { --color-accent: #e53935; }
-[data-accent="teal"]   { --color-accent: #14b8a6; }
-[data-accent="yellow"] { --color-accent: #eab308; }
-[data-accent="indigo"] { --color-accent: #6366f1; }
-[data-accent="cyan"]   { --color-accent: #06b6d4; }
-[data-accent="lime"]   { --color-accent: #84cc16; }
-[data-accent="rose"]   { --color-accent: #f43f5e; }
 
 [data-font-size="s"]  { font-size: 14px; }
 [data-font-size="m"]  { font-size: 15px; }

@@ -1,12 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
@@ -15,23 +9,28 @@ body {
   background: var(--color-bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
-
 img, svg, video, canvas { display: block; max-width: 100%; height: auto; }
 button, input, textarea, select { font: inherit; color: inherit; background: none; border: none; outline: none; font-family: inherit; }
 button { cursor: pointer; user-select: none; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
 a { color: var(--color-text-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 ul, ol { list-style: none; }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 4px; }
-
-* { scrollbar-width: thin; scrollbar-color: var(--color-text-tertiary) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
 *::-webkit-scrollbar { width: 6px; height: 6px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--color-text-tertiary); border-radius: 9999px; }
-
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 9999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 [hidden] { display: none !important; }
-
 ::selection { background: var(--color-accent); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
