@@ -252,10 +252,27 @@ export class Composer {
 
       // === ЗАГРУЗКА НА СЕРВЕР ===
       try {
-        const uploaded = await uploadFileWithProgress(file, (progress) => {
-          msg.attachments[0].progress = progress;
+        let uploaded;
+        
+        // Картинки и аудио — через base64 в БД
+        if (isImage || isAudio) {
+          msg.attachments[0].progress = 50;
           bus.emit('messages:update', { chatId, message: msg });
-        });
+          
+          const dataUrl = await fileToDataUrl(file);
+          const res = await fetch('/api/upload-base64', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataUrl, name: file.name })
+          });
+          uploaded = await res.json();
+        } else {
+          // Видео и прочие — через файловую систему
+          uploaded = await uploadFileWithProgress(file, (progress) => {
+            msg.attachments[0].progress = progress;
+            bus.emit('messages:update', { chatId, message: msg });
+          });
+        }
 
         console.log('[Composer] Загружено:', uploaded);
 
