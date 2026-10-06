@@ -241,7 +241,7 @@ export class Composer {
       }
 
       // Превью для картинок
-      if (isImage) {
+      if (isImage || isAudio) {
         try {
           const preview = await fileToDataUrl(file);
           msg.attachments[0].thumbnail = preview;
