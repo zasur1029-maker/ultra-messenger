@@ -372,62 +372,16 @@ export class MessageList {
       bubble.appendChild(audioWrap);
 
       // Логика воспроизведения
-      let audio = null;
-      let playing = false;
-
-      const setPlayIcon = (isPlaying) => {
-        playBtn.innerHTML = isPlaying
-          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
-          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-      };
-
       playBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!audio) {
-          audio = new Audio(att.url);
-          audio.addEventListener('loadedmetadata', () => {
-            totalTime.textContent = formatDuration(audio.duration);
-          });
-          audio.addEventListener('timeupdate', () => {
-            const pct = (audio.currentTime / audio.duration) * 100 || 0;
-            fill.style.width = pct + '%';
-            currentTime.textContent = formatDuration(audio.currentTime);
-          });
-          audio.addEventListener('ended', () => {
-            playing = false;
-            setPlayIcon(false);
-            fill.style.width = '0%';
-            currentTime.textContent = '0:00';
-          });
-          audio.addEventListener('error', () => {
-            toast.error('Не удалось воспроизвести');
-            playing = false;
-            setPlayIcon(false);
-          });
-        }
-
-        if (playing) {
-          audio.pause();
-          playing = false;
-          setPlayIcon(false);
-        } else {
-          audio.play().then(() => {
-            playing = true;
-            setPlayIcon(true);
-          }).catch((err) => {
-            console.error('Play error:', err);
-            toast.error('Ошибка воспроизведения');
-          });
-        }
-      });
-
-      // Клик по прогресс-бару — перемотка
-      progress.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!audio || !audio.duration) return;
-        const rect = progress.getBoundingClientRect();
-        const pct = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = pct * audio.duration;
+        import('./AudioPlayer.js').then(({ audioPlayer }) => {
+          audioPlayer.play(
+            msg,
+            att.url,
+            (att.name || 'Аудио').replace(/\.[^.]+$/, ''),
+            att.durationFormatted || '0:00'
+          );
+        });
       });
     }
 
