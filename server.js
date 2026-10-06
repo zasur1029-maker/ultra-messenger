@@ -154,23 +154,30 @@ app.get('/api/file/:id', async (req, res) => {
     if (!r.rows.length) return res.status(404).send('Not found');
     const dataUrl = r.rows[0].data;
 
-    // Парсим data URL: data:image/png;base64,iVBORw0...
-    const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
-    if (!match) {
-      console.error('❌ Некорректный dataUrl:', dataUrl.slice(0, 100));
+    console.log('[File] Запрос:', req.params.id, '| Первые 60 символов:', dataUrl.slice(0, 60));
+
+    // Гибкий парсинг: находим ;base64, и берём всё после
+    const base64Index = dataUrl.indexOf(';base64,');
+    if (base64Index === -1) {
+      console.error('[File] ❌ Нет ;base64, в dataUrl');
       return res.status(500).send('Invalid');
     }
 
-    const mime = match[1];
-    const base64 = match[2];
+    // MIME — между data: и ;base64,
+    const mimeStart = dataUrl.indexOf(':') + 1;
+    const mime = dataUrl.slice(mimeStart, base64Index).split(';')[0] || 'application/octet-stream';
+    const base64 = dataUrl.slice(base64Index + 8);
+
     const buffer = Buffer.from(base64, 'base64');
+
+    console.log('[File] ✅ MIME:', mime, '| Размер:', buffer.length, 'байт');
 
     res.set('Content-Type', mime);
     res.set('Cache-Control', 'public, max-age=31536000');
     res.set('Content-Length', buffer.length);
     res.send(buffer);
   } catch (e) {
-    console.error('File error:', e.message);
+    console.error('[File] Ошибка:', e.message);
     res.status(500).send(e.message);
   }
 });
