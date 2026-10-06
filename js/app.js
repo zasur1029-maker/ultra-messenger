@@ -189,6 +189,22 @@ const APP = {
       }
     });
 
+    // Сохранение сообщений на сервере
+    bus.on('message:sent', async ({ chatId, message }) => {
+      console.log('[App] message:sent → отправляю на сервер:', message.type);
+      try {
+        const res = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(message)
+        });
+        const data = await res.json();
+        console.log('[App] ✅ Сообщение сохранено на сервере:', data);
+      } catch (e) {
+        console.error('[App] ❌ Ошибка сохранения:', e);
+      }
+    });
+
     bus.on('messages:update', async ({ chatId, message }) => {
       const userKey = this.getUserKey();
       await DB.put('messages', message);

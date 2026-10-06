@@ -150,19 +150,27 @@ app.post('/api/upload-base64', async (req, res) => {
 // Раздача файлов из БД
 app.get('/api/file/:id', async (req, res) => {
   try {
-    const r = await pool.query('SELECT data FROM files WHERE id = $1', [req.params.id]);
+    const r = await pool.query('SELECT data, name FROM files WHERE id = $1', [req.params.id]);
     if (!r.rows.length) return res.status(404).send('Not found');
-
     const dataUrl = r.rows[0].data;
-    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) return res.status(500).send('Invalid');
+
+    // Парсим data URL: data:image/png;base64,iVBORw0...
+    const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+    if (!match) {
+      console.error('❌ Некорректный dataUrl:', dataUrl.slice(0, 100));
+      return res.status(500).send('Invalid');
+    }
 
     const mime = match[1];
-    const buffer = Buffer.from(match[2], 'base64');
+    const base64 = match[2];
+    const buffer = Buffer.from(base64, 'base64');
+
     res.set('Content-Type', mime);
     res.set('Cache-Control', 'public, max-age=31536000');
+    res.set('Content-Length', buffer.length);
     res.send(buffer);
   } catch (e) {
+    console.error('File error:', e.message);
     res.status(500).send(e.message);
   }
 });
