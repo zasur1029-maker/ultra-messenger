@@ -383,11 +383,10 @@ export class MessageList {
 
       playBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!audio) {
-          audio = new Audio(att.url);
-          audio.addEventListener('loadedmetadata', () => {
-            totalTime.textContent = formatDuration(audio.duration);
-          });
+        import('./AudioPlayer.js').then(({ audioPlayer }) => {
+          audioPlayer.play(msg, att.url, (att.name || 'Аудио').replace(/\.[^.]+$/, ''), att.durationFormatted || '0:00');
+        });
+      });
           audio.addEventListener('timeupdate', () => {
             const pct = (audio.currentTime / audio.duration) * 100 || 0;
             fill.style.width = pct + '%';
