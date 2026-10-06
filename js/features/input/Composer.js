@@ -197,6 +197,7 @@ export class Composer {
 
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(file.name);
       const me = store.state.user;
 
       // Создаём сообщение с прогрессом
@@ -205,10 +206,10 @@ export class Composer {
         chatId,
         authorId: me.username || me.id,
         authorName: me.name,
-        type: isImage ? 'image' : (isVideo ? 'video' : 'file'),
+        type: isImage ? 'image' : (isVideo ? 'video' : (isAudio ? 'audio' : 'file')),
         text: '',
         attachments: [{
-          kind: isImage ? 'image' : (isVideo ? 'video' : 'file'),
+          kind: isImage ? 'image' : (isVideo ? 'video' : (isAudio ? 'audio' : 'file')),
           url: null,
           name: file.name,
           size: file.size,

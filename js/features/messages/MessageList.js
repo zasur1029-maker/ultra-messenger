@@ -306,6 +306,131 @@ export class MessageList {
       }
     }
 
+    // Аудио (песни, музыка)
+    if (msg.type === 'audio' && msg.attachments && msg.attachments[0]) {
+      const att = msg.attachments[0];
+      const audioWrap = el('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '8px 10px',
+          minWidth: '260px',
+          maxWidth: '340px',
+          marginBottom: '2px'
+        }
+      });
+
+      // Круглая кнопка Play
+      const playBtn = el('button', {
+        type: 'button',
+        style: {
+          width: '44px', height: '44px',
+          borderRadius: '50%',
+          background: '#8774e1',
+          color: '#fff',
+          border: 'none',
+          display: 'grid', placeItems: 'center',
+          cursor: 'pointer',
+          flexShrink: '0',
+          fontSize: '18px'
+        }
+      });
+      playBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+      audioWrap.appendChild(playBtn);
+
+      // Инфо: название + прогресс
+      const info = el('div', { style: 'flex:1;min-width:0;' });
+
+      const name = el('div', {
+        style: 'font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;margin-bottom:4px;',
+        text: (att.name || 'Аудио').replace(/\.[^.]+$/, '')
+      });
+      info.appendChild(name);
+
+      // Прогресс-бар
+      const progress = el('div', {
+        style: 'position:relative;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;cursor:pointer;'
+      });
+      const fill = el('div', {
+        style: 'position:absolute;left:0;top:0;bottom:0;width:0%;background:#8774e1;border-radius:2px;transition:width 0.1s linear;'
+      });
+      progress.appendChild(fill);
+      info.appendChild(progress);
+
+      // Время
+      const timeRow = el('div', {
+        style: 'display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.6);margin-top:4px;'
+      });
+      const currentTime = el('span', { text: '0:00' });
+      const totalTime = el('span', { text: att.durationFormatted || '—' });
+      timeRow.appendChild(currentTime);
+      timeRow.appendChild(totalTime);
+      info.appendChild(timeRow);
+
+      audioWrap.appendChild(info);
+      bubble.appendChild(audioWrap);
+
+      // Логика воспроизведения
+      let audio = null;
+      let playing = false;
+
+      const setPlayIcon = (isPlaying) => {
+        playBtn.innerHTML = isPlaying
+          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+      };
+
+      playBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!audio) {
+          audio = new Audio(att.url);
+          audio.addEventListener('loadedmetadata', () => {
+            totalTime.textContent = formatDuration(audio.duration);
+          });
+          audio.addEventListener('timeupdate', () => {
+            const pct = (audio.currentTime / audio.duration) * 100 || 0;
+            fill.style.width = pct + '%';
+            currentTime.textContent = formatDuration(audio.currentTime);
+          });
+          audio.addEventListener('ended', () => {
+            playing = false;
+            setPlayIcon(false);
+            fill.style.width = '0%';
+            currentTime.textContent = '0:00';
+          });
+          audio.addEventListener('error', () => {
+            toast.error('Не удалось воспроизвести');
+            playing = false;
+            setPlayIcon(false);
+          });
+        }
+
+        if (playing) {
+          audio.pause();
+          playing = false;
+          setPlayIcon(false);
+        } else {
+          audio.play().then(() => {
+            playing = true;
+            setPlayIcon(true);
+          }).catch((err) => {
+            console.error('Play error:', err);
+            toast.error('Ошибка воспроизведения');
+          });
+        }
+      });
+
+      // Клик по прогресс-бару — перемотка
+      progress.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!audio || !audio.duration) return;
+        const rect = progress.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        audio.currentTime = pct * audio.duration;
+      });
+    }
+
     // Файлы
     if (msg.type === 'file' && msg.attachments && msg.attachments[0]) {
       const f = msg.attachments[0];
